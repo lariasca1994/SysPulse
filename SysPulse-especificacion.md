@@ -251,6 +251,7 @@ Android no permite a una app leer el CPU total del sistema, otros procesos, serv
 
 - Umbrales configurables por tipo de host (Windows / Android) en `appsettings.json`, recargables sin reiniciar.
 - **Histéresis**: se dispara si se supera el umbral en N lecturas seguidas y se recupera bajo un umbral inferior (evita alertas intermitentes).
+- **Persistencia mínima (8 min por defecto)**: una alerta solo se abre, escala o se da por solucionada si la condición se mantiene ese tiempo, para evitar la lluvia de avisos y soluciones. El admin la cambia desde la web (Administración → Alertas) y los agentes la aplican sin reinstalar.
 - **Deduplicación** por clave (`host + tipo + métrica`): un evento abierto no genera otro igual.
 - Clasificación ITIL del evento: **informativo**, **advertencia** o **excepción**. Solo la excepción se envía a la API y puede abrir incidente.
 
