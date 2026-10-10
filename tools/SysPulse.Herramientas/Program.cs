@@ -2,6 +2,7 @@
 // No forman parte del instalador público de los agentes (que solo instala, actualiza y desinstala).
 
 using DnsClient;
+using MongoDB.Driver;
 using SysPulse.Agent.Core.Configuracion;
 
 const string Uso = """
@@ -15,6 +16,8 @@ const string Uso = """
                                       y la registra como cambio estándar. Los equipos se actualizan solos.
       mongo-estandar                  Lee MONGO_URI (mongodb+srv://) del .env, resuelve SRV/TXT y guarda
                                       MONGO_URI_ANDROID (mongodb://) en el mismo .env, sin mostrarla.
+      anular-altas [--env <ruta>]     Borra los códigos de alta de equipos que aún no se usaron (vigentes o vencidos).
+                                      Los ya canjeados se conservan como historial.
     """;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -27,6 +30,7 @@ string? Opcion(string nombre)
 
 if (comando == "mongo-estandar") return await MongoEstandarAsync();
 if (comando == "config-central") return await ConfigCentralAsync(Opcion("--env") ?? BuscarEnv(Directory.GetCurrentDirectory()));
+if (comando == "anular-altas") return await AnularAltasAsync(Opcion("--env") ?? BuscarEnv(Directory.GetCurrentDirectory()));
 if (comando == "publicar-version") return await PublicarVersionAsync(Opcion("--env") ?? BuscarEnv(Directory.GetCurrentDirectory()), Opcion("--windows"), Opcion("--android"), Opcion("--version"), Opcion("--url"), Opcion("--codigo"));
 
 Console.WriteLine(Uso);
@@ -151,6 +155,24 @@ static async Task<int> PublicarVersionAsync(string? rutaEnv, string? zipWindows,
     Console.WriteLine(zipWindows is not null
         ? "Los equipos Windows se actualizarán solos en la próxima hora."
         : "Los celulares la descargarán y mostrarán una notificación para instalarla.");
+    return 0;
+}
+
+static async Task<int> AnularAltasAsync(string? rutaEnv)
+{
+    if (rutaEnv is null || !File.Exists(rutaEnv)) return Falla("No se encontró el archivo .env.");
+    var mongo = Valor([.. File.ReadAllLines(rutaEnv, System.Text.Encoding.UTF8)], "MONGO_URI");
+    if (string.IsNullOrWhiteSpace(mongo)) return Falla("MONGO_URI no está en el .env.");
+
+    var url = MongoDB.Driver.MongoUrl.Create(mongo);
+    var db = new MongoDB.Driver.MongoClient(url).GetDatabase(url.DatabaseName ?? "syspulse");
+    var filtro = MongoDB.Driver.Builders<MongoDB.Bson.BsonDocument>.Filter.Ne("usado", true);
+    var altas = db.GetCollection<MongoDB.Bson.BsonDocument>("altas_equipos");
+    var pistas = (await altas.Find(filtro).ToListAsync()).Select(d => d.GetValue("pista", "?").ToString()).ToList();
+    var borrados = (await altas.DeleteManyAsync(filtro)).DeletedCount;
+    // Solo se muestra el final del código (la pista), nunca el código completo (no se guarda).
+    foreach (var p in pistas) Console.WriteLine($"  Anulado: ····-{p}");
+    Console.WriteLine($"{borrados} código(s) de alta sin usar anulados. Los equipos ya vinculados no se ven afectados.");
     return 0;
 }
 
