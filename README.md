@@ -2,6 +2,8 @@
 
 <p>
   <a href="https://syspulse.vercel.app"><img src="docs/demo-badge.svg" alt="Abrir la demo en vivo" height="32"></a>
+  <a href="https://frontend-nine-topaz-99.vercel.app"><img src="https://portafolio-status.onrender.com/api/status/syspulse/badge.svg" alt="Estado en vivo del proyecto" height="32"></a>
+  <a href="https://d4i3vsgw7xwmh.cloudfront.net"><img src="https://portafolio-status.onrender.com/api/status/syspulse/qa-badge.svg" alt="Fecha y resultado de la última prueba E2E" height="32"></a>
 </p>
 
 ![.NET](https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
@@ -159,6 +161,23 @@ igual no se repite durante 30 minutos.
 | Gestión de problemas | Candidatos a problema: la misma alerta 3 veces o más en 7 días |
 | Habilitación de cambios | Cada versión de agente publicada queda registrada como cambio estándar |
 | Gestión de activos | Alta de equipos con código, nombres genéricos y retiro sin borrar historial |
+
+### Datos que captura
+
+Los agentes envían **solo métricas técnicas de salud**, sin datos sensibles ni información personal de
+los equipos agregados:
+
+| Se captura | No se captura nunca |
+|---|---|
+| Identificador anónimo del equipo (`win-` / `and-` + huella de 10 caracteres) | Nombre del equipo, usuario de Windows o cuenta del celular |
+| Tipo de equipo (Windows o Android) y versión del agente | Marca, modelo, número de serie o IMEI |
+| Uso de CPU, memoria, paginación y disco (promedio, mínimo, máximo y percentil 95 por ventana) | Archivos, documentos, fotos, contactos o mensajes |
+| Red: tráfico, errores, latencia y pérdida hacia DNS públicos, intensidad de señal y cantidad de puertos en escucha | Direcciones IP, ubicación, nombre de la red Wi-Fi o aplicaciones instaladas |
+| Almacenamiento libre y, en celulares, batería (nivel, carga, salud, temperatura y voltaje) | Contenido del almacenamiento o datos de las aplicaciones |
+| Eventos de alerta cuando una métrica supera un umbral | Historial de navegación o pulsaciones de teclado |
+
+En la plataforma cada equipo aparece con un nombre genérico (“Equipo portátil 2”, “Celular 1”) que
+asigna el sistema.
 
 ### Seguridad y estado
 
