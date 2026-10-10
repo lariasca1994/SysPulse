@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="32" viewBox="0 0 300 32" role="img" aria-label="Abrir demo en vivo Vercel + Render">
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B2230"/><stop offset="1" stop-color="#0F141C"/>
+    </linearGradient>
+  </defs>
+  <rect x=".75" y=".75" width="298.5" height="30.5" rx="15.25" fill="url(#fondo)" stroke="#30363D" stroke-width="1.5"/>
+  <g font-family="Segoe UI, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif">
+    <circle cx="17" cy="16.0" r="5" fill="#E1251B"/>
+    <text x="34" y="20.5" font-size="13" font-weight="700" fill="#F0F6FC">Abrir demo en vivo</text>
+    <circle cx="174.7" cy="16.0" r="1.6" fill="#6E7681"/><text x="184.7" y="20.5" font-size="12.5" fill="#9DA7B3">Vercel + Render</text>
+  </g>
+</svg>
