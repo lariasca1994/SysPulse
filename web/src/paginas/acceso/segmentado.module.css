@@ -1,0 +1,41 @@
+.grupo {
+  display: grid;
+  gap: 6px;
+}
+
+.etiqueta {
+  font-size: var(--fs-13);
+  font-weight: 500;
+}
+
+.segmentado {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.opcion {
+  min-height: 36px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+}
+
+.opcion:hover {
+  color: var(--text);
+}
+
+.opcion[aria-checked="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(11, 31, 58, 0.12);
+}

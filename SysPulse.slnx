@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SysPulse.Agent.Android/SysPulse.Agent.Android.csproj" />
+    <Project Path="src/SysPulse.Agent.Core/SysPulse.Agent.Core.csproj" />
+    <Project Path="src/SysPulse.Agent/SysPulse.Agent.csproj" />
+    <Project Path="src/SysPulse.Api/SysPulse.Api.csproj" />
+    <Project Path="src/SysPulse.Contracts/SysPulse.Contracts.csproj" />
+    <Project Path="src/SysPulse.Domain/SysPulse.Domain.csproj" />
+    <Project Path="src/SysPulse.Infrastructure/SysPulse.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SysPulse.Agent.Core.Tests/SysPulse.Agent.Core.Tests.csproj" />
+    <Project Path="tests/SysPulse.Domain.Tests/SysPulse.Domain.Tests.csproj" />
+    <Project Path="tests/SysPulse.Infrastructure.Tests/SysPulse.Infrastructure.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/SysPulse.AgentInstaller/SysPulse.AgentInstaller.csproj" />
+  </Folder>
+</Solution>

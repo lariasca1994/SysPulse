@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: .NET (dominio, API, agente Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Compilar
+        shell: pwsh
+        run: |
+          $proyectos = 'src/SysPulse.Domain','src/SysPulse.Contracts','src/SysPulse.Infrastructure','src/SysPulse.Api','src/SysPulse.Agent.Core','src/SysPulse.Agent','tools/SysPulse.AgentInstaller'
+          foreach ($p in $proyectos) { dotnet build $p -c Release; if ($LASTEXITCODE) { exit 1 } }
+      - name: Pruebas
+        shell: pwsh
+        run: |
+          foreach ($t in 'tests/SysPulse.Domain.Tests','tests/SysPulse.Agent.Core.Tests','tests/SysPulse.Infrastructure.Tests') { dotnet test $t -c Release; if ($LASTEXITCODE) { exit 1 } }
+
+  android:
+    name: Agente Android (APK)
+    # Runner Windows: en repos privados consume el doble de minutos gratuitos. Solo bajo demanda
+    # (Actions → CI → Run workflow); el APK se compila igual en cada versión publicada (release-agent).
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Instalar workload de Android
+        run: dotnet workload install maui-android
+      - name: Compilar
+        run: dotnet build src/SysPulse.Agent.Android -c Debug
+
+  web:
+    name: Web (React + PWA)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  docker:
+    name: Imagen Docker de la API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f deploy/Dockerfile.api -t syspulse-api .

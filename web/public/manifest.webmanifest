@@ -1,0 +1,19 @@
+{
+  "name": "SysPulse",
+  "short_name": "SysPulse",
+  "description": "Operaciones de TI: monitoreo de hosts, incidentes ITIL y coordinación en tiempo real.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07111F",
+  "theme_color": "#0B2A5B",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

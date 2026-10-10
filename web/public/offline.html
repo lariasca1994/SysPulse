@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>SysPulse — Sin conexión</title>
+    <style>
+      :root { color-scheme: light; --bg: #F4F6FA; --surface: #FFFFFF; --text: #0B1F3A; --muted: #4F5D73; --border: #DDE3EC; }
+      @media (prefers-color-scheme: dark) {
+        :root { color-scheme: dark; --bg: #07111F; --surface: #0E1B2E; --text: #E6EDF7; --muted: #A3B1C6; --border: #22344F; }
+      }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; font-size: 14px; }
+      main { max-width: 420px; padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); text-align: center; }
+      h1 { margin: 16px 0 8px; font-size: 20px; }
+      p { margin: 0 0 16px; color: var(--muted); line-height: 1.5; }
+      button { min-height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #0B3A7E; color: #FFFFFF; font: inherit; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon.svg" alt="" width="56" height="56" />
+      <h1>Sin conexión</h1>
+      <p>SysPulse necesita internet para mostrar datos en tiempo real. Los agentes siguen guardando lecturas y las enviarán al reconectar.</p>
+      <button type="button" onclick="location.reload()">Reintentar</button>
+    </main>
+  </body>
+</html>

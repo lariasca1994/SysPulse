@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SysPulse.Agent.Android.MainPage"
+             Title="SysPulse Agent">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="14">
+            <Label Text="SysPulse Agent" Style="{StaticResource Headline}" SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Sonda móvil: batería, temperatura, memoria, almacenamiento y red." Style="{StaticResource SubHeadline}" />
+
+            <Border Padding="16" StrokeShape="RoundRectangle 8">
+                <VerticalStackLayout Spacing="6">
+                    <Label x:Name="EstadoLabel" Text="Estado: —" FontAttributes="Bold" />
+                    <Label x:Name="HostLabel" Text="Host: —" />
+                    <Label x:Name="CicloLabel" Text="Último ciclo: —" />
+                    <Label x:Name="EnvioLabel" Text="Último envío a Atlas: —" />
+                    <Label x:Name="BufferLabel" Text="Buffer: —" FontFamily="monospace" FontSize="12" />
+                    <Label x:Name="ErrorLabel" Text="" TextColor="#C8231A" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Label x:Name="MensajeLabel" Text="" />
+
+            <Button x:Name="MonitoreoButton" Text="Iniciar monitoreo" Clicked="OnMonitoreoClicked" />
+
+            <Label Text="Ajustes del sistema (para que no cierre la app)" FontAttributes="Bold" Margin="0,12,0,0" />
+            <Label Text="1. Inicio automático: activado.  2. Ahorro de batería: Sin restricciones.  3. En apps recientes, bloquea la tarjeta de SysPulse con el candado.  4. Notificaciones permitidas." FontSize="13" />
+            <Button Text="Inicio automático" Clicked="OnInicioAutomaticoClicked" />
+            <Button Text="Sin restricciones de batería" Clicked="OnBateriaClicked" />
+            <Button Text="Ajustes de la app" Clicked="OnAjustesAppClicked" />
+
+            <Button x:Name="PruebaButton" Text="Ejecutar prueba técnica" Clicked="OnPruebaClicked" Margin="0,12,0,0" />
+            <Label x:Name="ResultadosLabel" FontFamily="monospace" FontSize="12" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

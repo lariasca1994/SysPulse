@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\SysPulse.Domain\SysPulse.Domain.csproj" />
+    <ProjectReference Include="..\SysPulse.Contracts\SysPulse.Contracts.csproj" />
+    <ProjectReference Include="..\SysPulse.Infrastructure\SysPulse.Infrastructure.csproj" />
+    <!-- Umbrales por defecto y configuración central: la web muestra la salud con los mismos criterios que los agentes. -->
+    <ProjectReference Include="..\SysPulse.Agent.Core\SysPulse.Agent.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

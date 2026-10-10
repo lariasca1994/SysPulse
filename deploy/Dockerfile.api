@@ -1,0 +1,33 @@
+# API de SysPulse para Render (web service gratuito). Construir desde la raíz del repo:
+#   docker build -f deploy/Dockerfile.api -t syspulse-api .
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Restaurar primero (capa en caché mientras no cambien los .csproj).
+COPY global.json Directory.Build.props .editorconfig ./
+COPY src/SysPulse.Domain/SysPulse.Domain.csproj src/SysPulse.Domain/
+COPY src/SysPulse.Contracts/SysPulse.Contracts.csproj src/SysPulse.Contracts/
+COPY src/SysPulse.Infrastructure/SysPulse.Infrastructure.csproj src/SysPulse.Infrastructure/
+COPY src/SysPulse.Agent.Core/SysPulse.Agent.Core.csproj src/SysPulse.Agent.Core/
+COPY src/SysPulse.Api/SysPulse.Api.csproj src/SysPulse.Api/
+RUN dotnet restore src/SysPulse.Api/SysPulse.Api.csproj
+
+COPY src/SysPulse.Domain/ src/SysPulse.Domain/
+COPY src/SysPulse.Contracts/ src/SysPulse.Contracts/
+COPY src/SysPulse.Infrastructure/ src/SysPulse.Infrastructure/
+COPY src/SysPulse.Agent.Core/ src/SysPulse.Agent.Core/
+COPY src/SysPulse.Api/ src/SysPulse.Api/
+RUN dotnet publish src/SysPulse.Api/SysPulse.Api.csproj -c Release -o /app --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+COPY --from=build /app ./
+
+# Render detecta el puerto abierto; la API escucha en 8080 sin privilegios.
+ENV ASPNETCORE_HTTP_PORTS=8080 \
+    DOTNET_gcServer=0
+EXPOSE 8080
+USER $APP_UID
+
+ENTRYPOINT ["dotnet", "SysPulse.Api.dll"]

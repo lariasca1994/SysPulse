@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="SysPulse: operaciones de TI, monitoreo de hosts e incidentes ITIL." />
+    <meta name="theme-color" content="#0B2A5B" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon.svg" />
+    <title>SysPulse</title>
+    <script>
+      // Aplica el tema guardado antes de pintar (sin parpadeo). Ver src/theme.ts.
+      (function () {
+        var pref = null;
+        try { pref = localStorage.getItem("syspulse.tema"); } catch (e) {}
+        var oscuro = pref === "oscuro" || (pref !== "claro" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = oscuro ? "dark" : "light";
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

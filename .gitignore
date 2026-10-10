@@ -1,0 +1,33 @@
+# Secretos
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+
+# Node / web
+node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+.vercel/
+
+# Datos locales del agente
+*.db
+*.db-shm
+*.db-wal
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Publicaciones locales
+artifacts/

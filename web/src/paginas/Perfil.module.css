@@ -1,0 +1,135 @@
+.rejilla {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  align-items: start;
+  gap: var(--sp-4);
+}
+
+.panel {
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.identidad {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--link);
+  font-size: var(--fs-20);
+  font-weight: 600;
+}
+
+.nombre {
+  font-size: var(--fs-20);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.rol {
+  color: var(--role-admin);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.rol[data-rol="N1"] { color: var(--role-n1); }
+.rol[data-rol="N2"] { color: var(--role-n2); }
+.rol[data-rol="N3"] { color: var(--role-n3); }
+.rol[data-rol="gestor"] { color: var(--role-gestor); }
+
+.datos {
+  display: grid;
+  margin: 0;
+}
+
+.datos > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--sp-1) var(--sp-3);
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-13);
+}
+
+.datos dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.datos dd {
+  margin: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.verificado {
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+
+.tituloPanel {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-16);
+  font-weight: 600;
+}
+
+.tituloPanel svg {
+  color: var(--link);
+}
+
+.nota {
+  margin-top: calc(var(--sp-2) * -1);
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+  line-height: 1.5;
+}
+
+.formulario {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.acciones {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .rejilla {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .panel {
+    padding: var(--sp-4);
+  }
+
+  .acciones > * {
+    flex: 1;
+  }
+}

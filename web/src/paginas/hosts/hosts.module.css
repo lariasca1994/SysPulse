@@ -1,0 +1,447 @@
+/* ───── Encabezado de página ───── */
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
+}
+
+.titulo {
+  font-size: var(--fs-24);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.subtitulo {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--fs-14);
+}
+
+.refresco {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.marcaTiempo {
+  color: var(--text-subtle);
+  font-size: var(--fs-13);
+}
+
+.botonIcono {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.botonIcono:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.botonIcono:disabled {
+  cursor: progress;
+}
+
+.girando {
+  animation: girar 0.9s linear infinite;
+}
+
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}
+
+.bloque {
+  margin-bottom: var(--sp-4);
+}
+
+/* ───── Indicadores de resumen ───── */
+.resumen {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+
+.indicador {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.indicadorIcono {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.indicador[data-tono="ok"] .indicadorIcono { background: var(--ok-soft); color: var(--ok); }
+.indicador[data-tono="advertencia"] .indicadorIcono { background: var(--warning-soft); color: var(--warning); }
+.indicador[data-tono="excepcion"] .indicadorIcono { background: var(--critical-soft); color: var(--critical); }
+
+.indicadorValor {
+  font-size: var(--fs-24);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.indicadorTexto {
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+}
+
+/* ───── Tarjetas de host ───── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: var(--sp-4);
+}
+
+.tarjeta {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: 300px;
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+
+/* Franja superior con el color de la salud del host. */
+.tarjeta::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--ok);
+  content: "";
+}
+
+.tarjeta[data-salud="advertencia"]::before { background: var(--warning-fill); }
+.tarjeta[data-salud="excepcion"]::before { background: var(--critical); }
+.tarjeta[data-salud="desconocida"]::before { background: var(--border-strong); }
+
+a.tarjeta:hover {
+  border-color: color-mix(in srgb, var(--link) 40%, var(--border));
+  box-shadow: 0 1px 2px rgba(11, 31, 58, 0.06), 0 10px 24px -12px rgba(11, 31, 58, 0.28);
+  transform: translateY(-1px);
+}
+
+.tarjetaCabeza {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
+.iconoHost {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.iconoHost[data-salud="advertencia"] { background: var(--warning-soft); color: var(--warning); }
+.iconoHost[data-salud="excepcion"] { background: var(--critical-soft); color: var(--critical); }
+.iconoHost[data-salud="desconocida"] { background: var(--surface-2); color: var(--text-subtle); }
+
+.identidad {
+  flex: 1;
+  min-width: 0;
+}
+
+.nombre {
+  overflow: hidden;
+  font-size: var(--fs-16);
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tipo {
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+}
+
+.pildora {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pildora[data-conexion="en-linea"] .punto {
+  animation: vivo 2s ease-in-out infinite;
+}
+
+@keyframes vivo {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent); }
+  50% { box-shadow: 0 0 0 4px transparent; }
+}
+
+.pildora[data-conexion="retrasado"] { background: var(--warning-soft); color: var(--warning); }
+.pildora[data-conexion="sin-reporte"] { background: var(--surface-2); color: var(--text-subtle); }
+
+.lineaEstado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.salud {
+  font-size: var(--fs-13);
+  font-weight: 600;
+  color: var(--ok);
+}
+
+.salud[data-salud="advertencia"] { color: var(--warning); }
+.salud[data-salud="excepcion"] { color: var(--critical); }
+.salud[data-salud="desconocida"] { color: var(--text-subtle); }
+
+.reporte {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-subtle);
+  font-size: var(--fs-12);
+}
+
+.alertaTarjeta {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  color: var(--text);
+  font-size: var(--fs-13);
+  line-height: 1.4;
+}
+
+.alertaTarjeta svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--warning);
+}
+
+.alertaTarjeta[data-severidad="excepcion"] {
+  background: var(--critical-soft);
+}
+
+.alertaTarjeta[data-severidad="excepcion"] svg {
+  color: var(--critical);
+}
+
+.alertaTarjeta > span:first-of-type {
+  flex: 1;
+}
+
+.mas {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+
+/* ───── Medidores ───── */
+.medidores {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.medidor {
+  display: grid;
+  gap: 6px;
+}
+
+.medidorFila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-size: var(--fs-13);
+}
+
+.medidorEtiqueta {
+  color: var(--text-muted);
+}
+
+.medidorValor {
+  font-weight: 600;
+}
+
+.medidorValor[data-nivel="advertencia"] { color: var(--warning); }
+.medidorValor[data-nivel="excepcion"] { color: var(--critical); }
+
+.cargando {
+  color: var(--text-subtle);
+  font-family: var(--font-sans);
+  font-weight: 400;
+}
+
+.pista {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.relleno {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 400ms ease;
+}
+
+.relleno[data-nivel="ok"] { background: var(--ok); }
+.relleno[data-nivel="advertencia"] { background: var(--warning-fill); }
+.relleno[data-nivel="excepcion"] { background: var(--critical); }
+
+.marca {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--warning-fill);
+  opacity: 0.8;
+  transform: translateX(-1px);
+}
+
+.marca[data-tipo="excepcion"] {
+  background: var(--critical);
+}
+
+.sinDatos {
+  color: var(--text-subtle);
+  font-size: var(--fs-13);
+}
+
+.pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  margin-top: auto;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+}
+
+.flecha {
+  margin-left: auto;
+  color: var(--text-subtle);
+  transition: transform var(--transition), color var(--transition);
+}
+
+a.tarjeta:hover .flecha {
+  color: var(--link);
+  transform: translateX(2px);
+}
+
+/* ───── Estados vacío y cargando ───── */
+.vacio {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-8) var(--sp-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.vacio h2 {
+  color: var(--text);
+  font-size: var(--fs-16);
+  font-weight: 600;
+}
+
+.esqueleto {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: brillo 1.4s ease-in-out infinite;
+}
+
+@keyframes brillo {
+  to { background-position: -200% 0; }
+}
+
+@media (max-width: 1100px) {
+  .resumen {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .resumen {
+    gap: var(--sp-2);
+  }
+
+  .indicador {
+    padding: var(--sp-3);
+  }
+
+  .indicadorIcono {
+    width: 34px;
+    height: 34px;
+  }
+
+  .indicadorValor {
+    font-size: var(--fs-20);
+  }
+
+  .tarjeta {
+    min-height: 0;
+  }
+}

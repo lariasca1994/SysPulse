@@ -1,0 +1,37 @@
+name: Despliegue API
+
+# Render está conectado a GitHub y despliega solo cuando el CI pasa.
+# Este workflow espera a que la API responda y registra el despliegue como cambio estándar.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      API_URL: ${{ secrets.API_URL }}
+      CI_API_KEY: ${{ secrets.CI_API_KEY }}
+    steps:
+      - name: Esperar /health (Render tarda en desplegar y despertar)
+        if: env.API_URL != ''
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS "$API_URL/health" > /dev/null; then echo "API arriba"; exit 0; fi
+            sleep 15
+          done
+          echo "La API no respondió en 10 minutos" && exit 1
+
+      - name: Registrar cambio estándar
+        if: env.API_URL != '' && env.CI_API_KEY != ''
+        run: |
+          curl -fsS -X POST "$API_URL/api/cambios/despliegue" \
+            -H "X-Api-Key: $CI_API_KEY" -H "Content-Type: application/json" \
+            -d "{\"componente\":\"api\",\"commit\":\"${{ github.event.workflow_run.head_sha }}\",\"autor\":\"${{ github.event.workflow_run.actor.login }}\"}"

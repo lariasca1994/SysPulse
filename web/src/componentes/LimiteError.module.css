@@ -1,0 +1,43 @@
+.caja {
+  display: flex;
+  gap: var(--sp-3);
+  max-width: 560px;
+  margin: var(--sp-8) auto;
+  padding: var(--sp-6);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--critical);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.caja svg {
+  flex: none;
+  color: var(--critical);
+}
+
+.caja h2 {
+  margin-bottom: var(--sp-1);
+  font-size: var(--fs-16);
+  font-weight: 600;
+}
+
+.caja p {
+  margin-bottom: var(--sp-4);
+  color: var(--text-muted);
+}
+
+.caja button {
+  min-height: 36px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--primary-text);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.caja button:hover {
+  background: var(--primary-hover);
+}

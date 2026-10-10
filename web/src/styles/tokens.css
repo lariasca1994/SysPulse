@@ -1,0 +1,132 @@
+/*
+ * Tokens de diseño de SysPulse (sección 7 de la especificación).
+ * Único lugar donde se escriben colores. Los componentes usan var(--…).
+ * Paleta inspirada en azul marino/cian (estructura y acción) y rojo (solo crítico).
+ * Contraste de texto verificado: >= 4.5:1 sobre --bg, --surface y --surface-2 en ambos temas.
+ */
+
+:root {
+  color-scheme: light;
+
+  --bg: #F4F6FA;
+  --surface: #FFFFFF;
+  --surface-2: #EEF2F8;
+  --border: #DDE3EC;
+  --border-strong: #C5CEDB;
+
+  --text: #0B1F3A;
+  --text-muted: #4F5D73;
+  --text-subtle: #5F6B80;
+
+  --nav: #0B2A5B;
+  --nav-text: #E6EDF7;
+  --nav-muted: #A3B1C6;
+
+  --primary: #0B3A7E;
+  --primary-hover: #082C61;
+  --primary-text: #FFFFFF;
+  --primary-soft: #E6EEF9;
+  --accent: #00A9E0;
+  --link: #006AA3;
+  --pulse: #E1251B;
+
+  --critical: #C8231A;
+  --critical-soft: #FDECEA;
+  --warning: #8A6100;
+  --warning-fill: #FFBE00;
+  --warning-soft: #FFF6D6;
+  --ok: #1A7335;
+  --ok-soft: #E7F5EC;
+  --info: #006AA3;
+  --info-soft: #E3F3FB;
+
+  --p1: #C8231A;
+  --p2: #C2410C;
+  --p3: #8A6100;
+  --p4: #006AA3;
+  --p5: #5F6B80;
+
+  --role-n1: #006AA3;
+  --role-n2: #0B3A7E;
+  --role-n3: #00727C;
+  --role-gestor: #8A6100;
+  --role-gestor-bg: #FFF6D6;
+  --role-admin: #2F3B52;
+
+  --shadow-card: 0 1px 2px rgba(11, 31, 58, 0.06), 0 1px 3px rgba(11, 31, 58, 0.08);
+
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+
+  --fs-12: 0.75rem;
+  --fs-13: 0.8125rem;
+  --fs-14: 0.875rem;
+  --fs-16: 1rem;
+  --fs-20: 1.25rem;
+  --fs-24: 1.5rem;
+  --fs-30: 1.875rem;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --transition: 150ms ease;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #07111F;
+  --surface: #0E1B2E;
+  --surface-2: #14243B;
+  --border: #22344F;
+  --border-strong: #31466A;
+
+  --text: #E6EDF7;
+  --text-muted: #A3B1C6;
+  --text-subtle: #8191AA;
+
+  --nav: #050C17;
+  --nav-text: #E6EDF7;
+  --nav-muted: #A3B1C6;
+
+  --primary: #00C8FF;
+  --primary-hover: #5AD8FF;
+  --primary-text: #04182F;
+  --primary-soft: #0C2F47;
+  --accent: #00C8FF;
+  --link: #4FD1FF;
+  --pulse: #FF4D3D;
+
+  --critical: #FF5A4E;
+  --critical-soft: #3A1517;
+  --warning: #FFC933;
+  --warning-fill: #FFBE00;
+  --warning-soft: #3A2E0A;
+  --ok: #4CC38A;
+  --ok-soft: #0F2E22;
+  --info: #4FB8F0;
+  --info-soft: #0C2A40;
+
+  --p1: #FF5A4E;
+  --p2: #FF8A4C;
+  --p3: #FFC933;
+  --p4: #4FB8F0;
+  --p5: #A3B1C6;
+
+  --role-n1: #4FB8F0;
+  --role-n2: #8FB4F0;
+  --role-n3: #4FD1C5;
+  --role-gestor: #FFC933;
+  --role-gestor-bg: #3A2E0A;
+  --role-admin: #A3B1C6;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+}

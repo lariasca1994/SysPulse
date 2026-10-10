@@ -1,0 +1,7 @@
+# Finales de línea LF en el repositorio (Dockerfile y scripts deben llegar con LF a Linux).
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.woff2 binary
+*.apk binary
+*.zip binary

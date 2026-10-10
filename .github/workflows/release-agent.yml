@@ -1,0 +1,55 @@
+name: Release de agentes
+
+# Publica el agente de Windows (+ instalador) y el APK de Android en GitHub Releases (gratis).
+# Disparo: etiqueta agent-vX.Y.Z
+
+on:
+  push:
+    tags: ['agent-v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Instalar workload de Android
+        run: dotnet workload install maui-android
+
+      - name: Publicar agente de Windows e instalador
+        shell: pwsh
+        run: |
+          dotnet publish src/SysPulse.Agent -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o out/agent
+          dotnet publish tools/SysPulse.AgentInstaller -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o out/installer
+          New-Item -ItemType Directory -Force release | Out-Null
+          Compress-Archive -Path out/agent/* -DestinationPath release/SysPulse.Agent-win-x64.zip
+          Copy-Item out/installer/SysPulse.AgentInstaller.exe release/
+
+      - name: Firmar y publicar APK de Android
+        shell: pwsh
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if (-not $env:KEYSTORE_B64) { Write-Error "Falta el secreto ANDROID_KEYSTORE_BASE64"; exit 1 }
+          [IO.File]::WriteAllBytes("$PWD/syspulse.keystore", [Convert]::FromBase64String($env:KEYSTORE_B64))
+          dotnet publish src/SysPulse.Agent.Android -c Release -f net10.0-android -o out/android `
+            -p:AndroidKeyStore=true -p:AndroidSigningKeyStore="$PWD/syspulse.keystore" `
+            -p:AndroidSigningKeyAlias=syspulse -p:AndroidSigningKeyPass="$env:KEYSTORE_PASS" -p:AndroidSigningStorePass="$env:KEYSTORE_PASS"
+          Remove-Item syspulse.keystore
+          Copy-Item (Get-ChildItem out/android -Filter *-Signed.apk | Select-Object -First 1).FullName release/SysPulse.Agent.Android.apk
+
+      - name: Calcular SHA-256
+        shell: pwsh
+        run: |
+          Get-ChildItem release | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name } | Set-Content release/SHA256SUMS.txt
+
+      - name: Crear release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" release/* --title "${{ github.ref_name }}" --generate-notes
