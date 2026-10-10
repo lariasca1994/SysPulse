@@ -117,6 +117,38 @@ internal static class Instalacion
         return 0;
     }
 
+    /// <summary>
+    /// install sobre un agente ya instalado (por ejemplo una versión anterior a la actualización automática):
+    /// reemplaza los binarios, guarda la configuración del código nuevo, registra la tarea de actualización y reinicia.
+    /// </summary>
+    public static int Reinstalar(string origen, IReadOnlyDictionary<string, string> secretos)
+    {
+        Paso($"El agente ya estaba instalado (v{Actualizador.VersionInstalada()}): se actualiza en {CarpetaPrograma}");
+        Paso("Deteniendo el servicio");
+        Detener();
+        try
+        {
+            Paso("Reemplazando los binarios");
+            CopiarCarpeta(origen, CarpetaPrograma);
+            ProtegerCarpetaPrograma();
+            CopiarInstalador();
+            Paso("Guardando los secretos cifrados (DPAPI)");
+            GuardarSecretos(secretos);
+            ProtegerCarpetaDatos();
+        }
+        finally
+        {
+            Paso("Iniciando el servicio");
+            Sc($"start {Servicio}");
+        }
+        RegistrarTareaActualizacion();
+        Console.WriteLine();
+        Console.WriteLine($"Listo. Estado: {Estado()} · agente v{Actualizador.VersionInstalada()}. Logs en {Path.Combine(CarpetaDatos, "logs")}");
+        return 0;
+    }
+
+    public static bool ServicioInstalado() => ServicioExiste();
+
     /// <summary>Vuelve a cifrar los secretos desde un .env (ej. tras cambiar un token) y reinicia el servicio.</summary>
     public static int ActualizarSecretos(IReadOnlyDictionary<string, string> secretos)
     {

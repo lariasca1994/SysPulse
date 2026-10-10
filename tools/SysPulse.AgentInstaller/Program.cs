@@ -51,11 +51,25 @@ if (comando == "auto-actualizar") return await Actualizador.EjecutarAsync(args.C
 var origen = Path.GetFullPath(Opcion("--desde")
     ?? (File.Exists(Path.Combine(AppContext.BaseDirectory, Instalacion.EjecutableAgente)) ? AppContext.BaseDirectory : Path.Combine(AppContext.BaseDirectory, "agent")));
 
-if (comando == "install") Instalacion.UsarRutas(Opcion("--destino"), Opcion("--datos"));
+// Si el agente ya está instalado, install trabaja sobre esa instalación (mismas carpetas) en vez de fallar.
+var yaInstalado = Instalacion.ServicioInstalado();
+if (comando == "install" && !yaInstalado) Instalacion.UsarRutas(Opcion("--destino"), Opcion("--datos"));
 else Instalacion.DetectarRutasInstaladas();
 
 if (comando is "install" or "secretos")
 {
+    // Validar ANTES de canjear: un código es de un solo uso y no debe gastarse en una instalación que va a fallar.
+    if (comando == "install" && !File.Exists(Path.Combine(origen, Instalacion.EjecutableAgente)))
+    {
+        Console.Error.WriteLine($"No se encontró {Instalacion.EjecutableAgente} junto al instalador. Descomprime el zip completo y ejecuta desde esa carpeta.");
+        return 1;
+    }
+    if (comando == "secretos" && !yaInstalado)
+    {
+        Console.Error.WriteLine("El agente no está instalado en este equipo. Usa: install --codigo XXXX-XXXX");
+        return 1;
+    }
+
     // Instalación con código de alta (lo normal) o, solo en desarrollo, con un .env local (--env).
     Dictionary<string, string>? secretos;
     if (Opcion("--codigo") is { } codigo) secretos = await Alta.CanjearAsync(Opcion("--api") ?? Alta.ApiPorDefecto, codigo);
@@ -66,7 +80,8 @@ if (comando is "install" or "secretos")
         return 1;
     }
     if (secretos is null) return 1;
-    return comando == "install" ? Instalacion.Instalar(origen, secretos) : Instalacion.ActualizarSecretos(secretos);
+    if (comando == "secretos") return Instalacion.ActualizarSecretos(secretos);
+    return yaInstalado ? Instalacion.Reinstalar(origen, secretos) : Instalacion.Instalar(origen, secretos);
 }
 
 return comando == "update" ? Instalacion.Actualizar(origen) : Instalacion.Desinstalar(args.Contains("--purgar"));
