@@ -53,10 +53,10 @@ internal static class Instalacion
         return new WindowsPrincipal(identidad).IsInRole(WindowsBuiltInRole.Administrator);
     }
 
-    public static int Instalar(string origen, string rutaEnv)
+    public static int Instalar(string origen, IReadOnlyDictionary<string, string> secretos)
     {
         if (!File.Exists(Path.Combine(origen, Ejecutable))) return Error($"No se encontró {Ejecutable} en {origen}.");
-        if (!File.Exists(rutaEnv)) return Error($"No se encontró el archivo de secretos {rutaEnv}.");
+        if (!secretos.ContainsKey("MONGO_URI")) return Error("Faltan los datos de conexión (canjea un código de alta).");
         if (ServicioExiste()) return Error("El servicio ya existe. Use 'update' para actualizar o 'uninstall' primero.");
 
         Paso("Copiando el agente a " + CarpetaPrograma);
@@ -80,7 +80,7 @@ internal static class Instalacion
         AgregarAGrupo("S-1-5-32-573");
 
         Paso("Guardando los secretos cifrados (DPAPI)");
-        GuardarSecretos(rutaEnv);
+        GuardarSecretos(secretos);
         ProtegerCarpetaDatos();
 
         CopiarInstalador();
@@ -118,13 +118,13 @@ internal static class Instalacion
     }
 
     /// <summary>Vuelve a cifrar los secretos desde un .env (ej. tras cambiar un token) y reinicia el servicio.</summary>
-    public static int ActualizarSecretos(string rutaEnv)
+    public static int ActualizarSecretos(IReadOnlyDictionary<string, string> secretos)
     {
-        if (!File.Exists(rutaEnv)) return Error($"No se encontró el archivo de secretos {rutaEnv}.");
+        if (!secretos.ContainsKey("MONGO_URI")) return Error("Faltan los datos de conexión.");
         if (!ServicioExiste()) return Error("El servicio no está instalado. Use 'install'.");
 
         Paso("Guardando los secretos cifrados (DPAPI) en " + CarpetaDatos);
-        GuardarSecretos(rutaEnv);
+        GuardarSecretos(secretos);
         Paso("Reiniciando el servicio");
         Detener();
         Sc($"start {Servicio}");
@@ -191,9 +191,10 @@ internal static class Instalacion
         Console.WriteLine(codigo == 0 ? "   tarea creada: " + Actualizador.Tarea : "   no se pudo crear la tarea: " + salida.Trim());
     }
 
-    private static void GuardarSecretos(string rutaEnv)
+    /// <summary>Lee de un .env solo las claves que usa el agente (instalación de desarrollo).</summary>
+    public static Dictionary<string, string> LeerEnv(string rutaEnv)
     {
-        var lineas = File.ReadAllLines(rutaEnv, System.Text.Encoding.UTF8);
+        var lineas = File.Exists(rutaEnv) ? File.ReadAllLines(rutaEnv, System.Text.Encoding.UTF8) : [];
         var secretos = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var clave in AlmacenSecretosWindows.Claves)
         {
@@ -201,6 +202,12 @@ internal static class Instalacion
             var valor = linea?[(linea.IndexOf('=', StringComparison.Ordinal) + 1)..].Trim().Trim('"');
             if (!string.IsNullOrEmpty(valor)) secretos[clave] = valor;
         }
+        return secretos;
+    }
+
+    private static void GuardarSecretos(IReadOnlyDictionary<string, string> todos)
+    {
+        var secretos = todos.Where(p => AlmacenSecretosWindows.Claves.Contains(p.Key) && p.Value.Length > 0).ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
         AlmacenSecretosWindows.Guardar(Path.Combine(CarpetaDatos, AlmacenSecretosWindows.NombreArchivo), secretos);
         Console.WriteLine($"   {secretos.Count} secretos guardados: {string.Join(", ", secretos.Keys)} (valores no mostrados)");
     }

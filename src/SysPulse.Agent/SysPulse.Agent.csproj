@@ -5,8 +5,8 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <AssemblyName>SysPulse.Agent</AssemblyName>
-    <!-- 1.3.0: alertas con persistencia mínima de 8 min; actualización automática desde GitHub Releases. -->
-    <Version>1.3.0</Version>
+    <!-- 1.4.0: alta con código de un solo uso; instalador sin funciones de administración ni secretos. -->
+    <Version>1.4.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 

@@ -315,3 +315,131 @@
 .cargando {
   height: 320px;
 }
+
+/* ───── Equipos ───── */
+.cabeceraEquipos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.cabeceraEquipos .nota {
+  max-width: 720px;
+}
+
+.equipo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.equipo svg {
+  color: var(--link);
+}
+
+.conexion {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.conexion[data-conexion="retrasado"] { background: var(--warning-soft); color: var(--warning); }
+.conexion[data-conexion="sin-reporte"] { background: var(--surface-2); color: var(--text-subtle); }
+
+.codigosLista {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.codigosLista li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: var(--fs-13);
+}
+
+.codigoGrande {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.codigoGrande span {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.instruccion {
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.instruccion h4 {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-14);
+}
+
+.instruccion h4 svg {
+  color: var(--link);
+}
+
+.instruccion ol {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 var(--sp-2);
+  padding-left: var(--sp-6);
+  font-size: var(--fs-13);
+  line-height: 1.5;
+}
+
+.instruccion a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.comando {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--nav);
+  color: var(--nav-text);
+}
+
+.comando code {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+}
+
+.comando button {
+  color: var(--nav-text);
+}
+
+.desplazable + .nota {
+  margin-top: var(--sp-3);
+}

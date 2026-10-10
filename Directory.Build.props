@@ -7,5 +7,13 @@
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <Authors>SysPulse</Authors>
     <Product>SysPulse</Product>
+    <!-- Seguridad: los binarios publicados no deben revelar rutas del equipo donde se compilan (ej. A:\Github\...). -->
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=/_/</PathMap>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <!-- En Release los ejecutables no llevan símbolos de depuración. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
 </Project>

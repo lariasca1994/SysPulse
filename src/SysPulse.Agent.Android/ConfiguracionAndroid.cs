@@ -55,6 +55,49 @@ public static class ConfiguracionAndroid
 
     public static async Task<bool> EstaConfiguradoAsync() => await SecureStorage.Default.GetAsync("MONGO_URI_ANDROID") is not null;
 
+    /// <summary>URL pública de la API (no es secreta). La app no lleva ningún secreto: llegan al canjear el código.</summary>
+    public const string ApiPorDefecto = "https://syspulse-api-7dj0.onrender.com";
+
+    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(3) };
+
+    /// <summary>
+    /// Vincula el celular con un código de alta de un solo uso (lo genera el admin en Administración → Equipos).
+    /// Lo recibido se guarda cifrado en SecureStorage (Android Keystore). Devuelve null si salió bien o el error.
+    /// </summary>
+    public static async Task<string?> VincularAsync(string codigo)
+    {
+        HttpResponseMessage respuesta;
+        try
+        {
+            respuesta = await Http.PostAsync(new Uri($"{ApiPorDefecto}/api/agentes/alta"),
+                System.Net.Http.Json.JsonContent.Create(new SysPulse.Contracts.SolicitudAlta(codigo, "android")));
+        }
+        catch (HttpRequestException)
+        {
+            return "Sin conexión con SysPulse. Revisa el Wi-Fi o los datos e inténtalo de nuevo.";
+        }
+        catch (TaskCanceledException)
+        {
+            return "SysPulse no respondió a tiempo (puede estar despertando). Inténtalo en un minuto.";
+        }
+
+        using (respuesta)
+        {
+            if ((int)respuesta.StatusCode == 429) return "Demasiados intentos. Espera un minuto.";
+            if (!respuesta.IsSuccessStatusCode) return "El código no es válido, ya se usó o venció. Pide uno nuevo al administrador.";
+            var r = await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<SysPulse.Contracts.RespuestaAlta>(respuesta.Content);
+            if (r is null) return "Respuesta inesperada de SysPulse.";
+            if (CadenaMongo.Validar(r.MongoUri, esAndroid: true) is { } error) return $"Configuración rechazada: {error}";
+
+            await SecureStorage.Default.SetAsync("MONGO_URI_ANDROID", r.MongoUri);
+            await SecureStorage.Default.SetAsync("API_URL", r.ApiUrl);
+            await SecureStorage.Default.SetAsync("AGENT_API_KEY", r.AgentApiKey);
+            await SecureStorage.Default.SetAsync("TELEGRAM_FIXED_CHAT_IDS", string.Join(',', r.TelegramChatIds));
+            if (!string.IsNullOrWhiteSpace(r.TelegramBotToken)) await SecureStorage.Default.SetAsync("TELEGRAM_BOT_TOKEN", r.TelegramBotToken);
+            return null;
+        }
+    }
+
     public static async Task<OpcionesAgente> CargarOpcionesAsync()
     {
         var chats = await SecureStorage.Default.GetAsync("TELEGRAM_FIXED_CHAT_IDS") ?? "";

@@ -60,3 +60,39 @@ export const cuenta = {
   miSolicitud: (t: string) => get<Solicitud | null>("/api/cuenta/solicitud-gestor", t),
   solicitarGestor: (t: string, motivo: string) => post<{ ok: boolean }>("/api/cuenta/solicitud-gestor", { motivo }, t),
 };
+
+export interface Equipo {
+  id: string;
+  nombre: string;
+  clase: string;
+  tipo: "windows" | "android" | string;
+  versionAgente: string | null;
+  ultimoReporte: string | null;
+  conexion: "en-linea" | "retrasado" | "sin-reporte";
+  retirado: boolean;
+  retiradoEn: string | null;
+}
+
+export interface CodigoAlta {
+  pista: string;
+  creadoPor: string;
+  creado: string;
+  expira: string;
+  estado: "pendiente" | "usado" | "vencido";
+  tipoUsado: string | null;
+  usadoEn: string | null;
+}
+
+export const equipos = {
+  listar: (t: string) => get<Equipo[]>("/api/admin/equipos", t),
+  renombrar: (t: string, id: string, nombre: string) => post<{ ok: boolean }>(`/api/admin/equipos/${encodeURIComponent(id)}/nombre`, { nombre }, t),
+  retirar: (t: string, id: string, retirar: boolean) => post<{ ok: boolean }>(`/api/admin/equipos/${encodeURIComponent(id)}/retiro`, { retirar }, t),
+  codigos: (t: string) => get<CodigoAlta[]>("/api/admin/altas", t),
+  nuevoCodigo: (t: string) => post<{ codigo: string; expira: string }>("/api/admin/altas", {}, t),
+};
+
+/** Siempre la última versión publicada de los instaladores (repositorio público, solo binarios). */
+export const DESCARGAS = {
+  windows: "https://github.com/lariasca1994/syspulse-agentes/releases/latest/download/SysPulse.Agent-win-x64.zip",
+  android: "https://github.com/lariasca1994/syspulse-agentes/releases/latest/download/SysPulse-agente-android.apk",
+};

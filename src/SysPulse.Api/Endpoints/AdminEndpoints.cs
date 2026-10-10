@@ -53,3 +53,46 @@ public static class AdminEndpoints
 
     private static string Nombre(ClaimsPrincipal u) => u.FindFirstValue(JwtRegisteredClaimNames.Name) ?? "Administrador";
 }
+
+public sealed record NuevoNombreEquipo(string? Nombre);
+public sealed record RetiroEquipo(bool Retirar);
+
+/// <summary>Equipos: alta con código (admin), canje del código (instalador/app, sin sesión) y gestión de nombres y retiros.</summary>
+public static class EquiposEndpoints
+{
+    public static void MapEquipos(this IEndpointRouteBuilder app)
+    {
+        var g = app.MapGroup("/api/admin").RequireAuthorization("Admin");
+
+        g.MapGet("/equipos", (ServicioHosts h, CancellationToken ct) => h.EquiposAsync(ct));
+
+        g.MapPost("/equipos/{id}/nombre", async (string id, NuevoNombreEquipo n, ClaimsPrincipal u, ServicioHosts h, SysPulse.Infrastructure.Persistencia.Auditoria a, CancellationToken ct) =>
+        {
+            var error = await h.RenombrarAsync(id, n.Nombre, ct);
+            if (error is null) await a.RegistrarAsync("admin.equipo_renombrado", ObjectId.Parse(u.FindFirstValue(JwtRegisteredClaimNames.Sub)!), null, n.Nombre, "host", id, ct);
+            return error is null ? Results.Ok(new { ok = true }) : Results.Problem(error, statusCode: 400);
+        });
+
+        g.MapPost("/equipos/{id}/retiro", async (string id, RetiroEquipo r, ClaimsPrincipal u, ServicioHosts h, SysPulse.Infrastructure.Persistencia.Auditoria a, CancellationToken ct) =>
+        {
+            var error = await h.RetirarAsync(id, r.Retirar, ct);
+            if (error is null) await a.RegistrarAsync(r.Retirar ? "admin.equipo_retirado" : "admin.equipo_restaurado", ObjectId.Parse(u.FindFirstValue(JwtRegisteredClaimNames.Sub)!), null, null, "host", id, ct);
+            return error is null ? Results.Ok(new { ok = true }) : Results.Problem(error, statusCode: 400);
+        });
+
+        g.MapGet("/altas", (ServicioAltas s, CancellationToken ct) => s.CodigosAsync(ct));
+
+        g.MapPost("/altas", async (ClaimsPrincipal u, ServicioAltas s, CancellationToken ct) =>
+        {
+            var (codigo, expira) = await s.CrearAsync(ObjectId.Parse(u.FindFirstValue(JwtRegisteredClaimNames.Sub)!), u.FindFirstValue(JwtRegisteredClaimNames.Name) ?? "Admin", ct);
+            return Results.Ok(new { codigo, expira });
+        });
+
+        // Canje del código (sin sesión): limitado por IP como el inicio de sesión, para impedir probar códigos al azar.
+        app.MapPost("/api/agentes/alta", async (SysPulse.Contracts.SolicitudAlta sol, HttpContext http, ServicioAltas s, CancellationToken ct) =>
+            await s.CanjearAsync(sol, http.Connection.RemoteIpAddress?.ToString(), ct) is { } r
+                ? Results.Ok(r)
+                : Results.Problem("El código no es válido, ya se usó o venció.", statusCode: 400))
+            .RequireRateLimiting("auth");
+    }
+}

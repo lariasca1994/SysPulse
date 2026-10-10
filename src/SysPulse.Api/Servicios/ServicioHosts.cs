@@ -32,6 +32,9 @@ public sealed record HostVista(
     IReadOnlyDictionary<string, UmbralVista> Umbrales,
     IReadOnlyList<AlertaVista> Alertas);
 
+/// <summary>Equipo para la administración: nombre genérico, tipo, versión y si está retirado.</summary>
+public sealed record EquipoVista(string Id, string Nombre, string Clase, string Tipo, string? VersionAgente, DateTime? UltimoReporte, string Conexion, bool Retirado, DateTime? RetiradoEn);
+
 /// <summary>Punto de una serie: [ts en ms Unix, promedio, máximo].</summary>
 public sealed record SerieVista(string? Unidad, IReadOnlyList<double[]> Puntos);
 
@@ -68,24 +71,82 @@ public sealed partial class ServicioHosts(ContextoMongo mongo, TimeProvider relo
         var config = await ConfiguracionAsync(ct).ConfigureAwait(false);
 
         var vistas = hosts.Select(h => Construir(h, estados.GetValueOrDefault(h["_id"].ToString()!), config)).ToList();
-        return [.. Anonimizar(vistas).OrderBy(h => OrdenSalud(h.Salud)).ThenBy(h => h.Nombre, StringComparer.CurrentCulture)];
+        var alias = await AliasAsync(vistas, ct).ConfigureAwait(false);
+        return [.. vistas
+            .Where(v => !alias.TryGetValue(v.Id, out var a) || !a.Retirado)
+            .Select(v => v with { Nombre = alias.TryGetValue(v.Id, out var a) ? a.Nombre : NuevoNombre(v) })
+            .OrderBy(h => OrdenSalud(h.Salud)).ThenBy(h => h.Nombre, StringComparer.CurrentCulture)];
     }
 
-    /// <summary>Un solo host. Se arma desde la lista completa para que su nombre genérico coincida con el de la lista.</summary>
+    /// <summary>Un solo host (no retirado), con el mismo nombre que en la lista.</summary>
     public async Task<HostVista?> ObtenerAsync(string id, CancellationToken ct) =>
         (await ListarAsync(ct).ConfigureAwait(false)).FirstOrDefault(h => h.Id == id);
 
+    /// <summary>Todos los equipos, incluidos los retirados (pantalla de administración).</summary>
+    public async Task<IReadOnlyList<EquipoVista>> EquiposAsync(CancellationToken ct)
+    {
+        var hosts = await _hosts.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync(ct).ConfigureAwait(false);
+        var estados = (await _estado.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync(ct).ConfigureAwait(false))
+            .ToDictionary(e => e["_id"].ToString()!, StringComparer.Ordinal);
+        var config = await ConfiguracionAsync(ct).ConfigureAwait(false);
+        var vistas = hosts.Select(h => Construir(h, estados.GetValueOrDefault(h["_id"].ToString()!), config)).ToList();
+        var alias = await AliasAsync(vistas, ct).ConfigureAwait(false);
+        return [.. vistas
+            .Select(v => alias.TryGetValue(v.Id, out var a)
+                ? new EquipoVista(v.Id, a.Nombre, a.Clase, v.Tipo, v.VersionAgente, v.UltimoReporte, v.Conexion, a.Retirado, a.RetiradoEn)
+                : new EquipoVista(v.Id, NuevoNombre(v), Clase(v), v.Tipo, v.VersionAgente, v.UltimoReporte, v.Conexion, false, null))
+            .OrderBy(e => e.Retirado).ThenBy(e => e.Nombre, StringComparer.CurrentCulture)];
+    }
+
+    /// <summary>El admin puede dar un nombre propio (genérico: sin marcas, modelos ni nombres de personas).</summary>
+    public async Task<string?> RenombrarAsync(string id, string? nombre, CancellationToken ct)
+    {
+        var limpio = nombre?.Trim() ?? "";
+        if (!NombreValido().IsMatch(limpio)) return "Usa entre 3 y 40 letras, números, espacios o guiones.";
+        var r = await mongo.HostsAlias.UpdateOneAsync(a => a.Id == id, Builders<HostAliasDoc>.Update.Set(a => a.Nombre, limpio), cancellationToken: ct).ConfigureAwait(false);
+        return r.MatchedCount == 0 ? "El equipo no existe o aún no ha reportado." : null;
+    }
+
+    /// <summary>Retirar oculta el equipo de la operación diaria sin borrar su historial (se puede restaurar).</summary>
+    public async Task<string?> RetirarAsync(string id, bool retirar, CancellationToken ct)
+    {
+        var r = await mongo.HostsAlias.UpdateOneAsync(a => a.Id == id, Builders<HostAliasDoc>.Update
+            .Set(a => a.Retirado, retirar).Set(a => a.RetiradoEn, retirar ? reloj.GetUtcNow().UtcDateTime : null), cancellationToken: ct).ConfigureAwait(false);
+        return r.MatchedCount == 0 ? "El equipo no existe o aún no ha reportado." : null;
+    }
+
     /// <summary>
-    /// La web nunca recibe fabricante, modelo ni nombre del equipo: cada host se muestra con un nombre genérico
-    /// por tipo ("Equipo de escritorio", "Equipo portátil", "Celular"), numerado si hay más de uno del mismo tipo.
-    /// El número es estable: se asigna por orden del id anónimo.
+    /// La web nunca recibe fabricante, modelo ni nombre del equipo. La primera vez que un equipo reporta lecturas se le
+    /// asigna un nombre genérico con número fijo por tipo ("Equipo portátil 2"): agregar equipos no renombra a los demás.
     /// </summary>
-    private static IEnumerable<HostVista> Anonimizar(List<HostVista> vistas) =>
-        vistas.GroupBy(Clase).SelectMany(g =>
+    private async Task<Dictionary<string, HostAliasDoc>> AliasAsync(List<HostVista> vistas, CancellationToken ct)
+    {
+        var alias = (await mongo.HostsAlias.Find(FilterDefinition<HostAliasDoc>.Empty).ToListAsync(ct).ConfigureAwait(false))
+            .ToDictionary(a => a.Id, StringComparer.Ordinal);
+        // Sin lecturas todavía no se sabe si es portátil o escritorio: se espera a su primer reporte.
+        foreach (var v in vistas.Where(v => !alias.ContainsKey(v.Id) && v.Lecturas.Count > 0).OrderBy(v => v.Id, StringComparer.Ordinal))
         {
-            var ordenados = g.OrderBy(h => h.Id, StringComparer.Ordinal).ToList();
-            return ordenados.Select((h, i) => h with { Nombre = ordenados.Count > 1 ? $"{g.Key} {i + 1}" : g.Key });
-        });
+            var clase = Clase(v);
+            var numero = alias.Values.Where(a => a.Clase == clase).Select(a => a.Numero).DefaultIfEmpty(0).Max() + 1;
+            var doc = new HostAliasDoc { Id = v.Id, Clase = clase, Numero = numero, Nombre = $"{clase} {numero}", Creado = reloj.GetUtcNow().UtcDateTime };
+            try
+            {
+                await mongo.HostsAlias.InsertOneAsync(doc, cancellationToken: ct).ConfigureAwait(false);
+                alias[v.Id] = doc;
+            }
+            catch (MongoWriteException ex) when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+            {
+                // Otra consulta simultánea ya lo asignó.
+                alias[v.Id] = await mongo.HostsAlias.Find(a => a.Id == v.Id).FirstAsync(ct).ConfigureAwait(false);
+            }
+        }
+        return alias;
+    }
+
+    private static string NuevoNombre(HostVista v) => v.Tipo == "android" ? "Celular nuevo" : "Equipo nuevo";
+
+    [GeneratedRegex(@"^[\p{L}\p{N} \-]{3,40}$")]
+    private static partial Regex NombreValido();
 
     private static string Clase(HostVista h) =>
         h.Tipo == "android" ? "Celular" : h.Lecturas.ContainsKey("bateria_pct") ? "Equipo portátil" : "Equipo de escritorio";

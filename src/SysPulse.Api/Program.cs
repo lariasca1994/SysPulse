@@ -48,6 +48,15 @@ builder.Services.AddSingleton<ServicioChat>();
 builder.Services.AddScoped<ServicioIncidentes>();
 builder.Services.AddScoped<ServicioAnalitica>();
 builder.Services.AddScoped<ServicioAdmin>();
+builder.Services.AddScoped<ServicioAltas>();
+// Lo que recibe un equipo al darse de alta. MONGO_URI_AGENTES* permite usar un usuario de base exclusivo (y limitado) para los agentes.
+builder.Services.AddSingleton(new OpcionesAlta(
+    config["MONGO_URI_AGENTES"] ?? config["MONGO_URI"],
+    config["MONGO_URI_AGENTES_ANDROID"] ?? config["MONGO_URI_ANDROID"],
+    (config["API_PUBLICA"] ?? "https://syspulse-api-7dj0.onrender.com").TrimEnd('/'),
+    config["AGENT_API_KEY"],
+    config["TELEGRAM_BOT_TOKEN"],
+    [.. (config["TELEGRAM_FIXED_CHAT_IDS"] ?? "").Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries)]));
 builder.Services.AddSingleton(new SysPulse.Agent.Core.Envio.PublicadorAtlas(Requerida("MONGO_URI")));
 
 // Notificaciones (sección 7): cola en memoria + envío en segundo plano. Las cuentas fijas reciben todo.
@@ -137,6 +146,7 @@ app.MapIncidentes(config["AGENT_API_KEY"]);
 app.MapSalas();
 app.MapAnalitica();
 app.MapAdmin();
+app.MapEquipos();
 app.MapHub<SysPulse.Api.Hubs.ChatHub>("/hubs/chat");
 app.MapTelegram(config["TELEGRAM_WEBHOOK_SECRET"]);
 

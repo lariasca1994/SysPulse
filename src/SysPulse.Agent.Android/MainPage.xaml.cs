@@ -23,6 +23,8 @@ public partial class MainPage : ContentPage
 
 		if (OperatingSystem.IsAndroidVersionAtLeast(33)) await Permissions.RequestAsync<Permissions.PostNotifications>();
 
+		VincularPanel.IsVisible = !await ConfiguracionAndroid.EstaConfiguradoAsync();
+
 		_refresco = Dispatcher.CreateTimer();
 		_refresco.Interval = TimeSpan.FromSeconds(2);
 		_refresco.Tick += (_, _) => Refrescar();
@@ -67,11 +69,36 @@ public partial class MainPage : ContentPage
 
 		if (!await ConfiguracionAndroid.EstaConfiguradoAsync())
 		{
-			MensajeLabel.Text = "Falta la configuración: envía configuracion.txt desde el PC (adb push).";
+			MensajeLabel.Text = "Primero vincula el celular con el código de alta.";
+			VincularPanel.IsVisible = true;
 			return;
 		}
 		ConfiguracionAndroid.MonitoreoActivo = true;
 		ServicioMonitoreo.Iniciar(contexto);
+	}
+
+	private async void OnVincularClicked(object? sender, EventArgs e)
+	{
+		var codigo = (CodigoEntry.Text ?? "").Trim();
+		if (codigo.Count(char.IsLetterOrDigit) != 8)
+		{
+			MensajeLabel.Text = "El código tiene 8 caracteres (ej. K7QM-4XPA).";
+			return;
+		}
+		VincularButton.IsEnabled = false;
+		MensajeLabel.Text = "Vinculando… (puede tardar hasta un minuto si el servidor estaba dormido)";
+		var error = await ConfiguracionAndroid.VincularAsync(codigo);
+		VincularButton.IsEnabled = true;
+		if (error is not null)
+		{
+			MensajeLabel.Text = error;
+			return;
+		}
+		VincularPanel.IsVisible = false;
+		CodigoEntry.Text = "";
+		MensajeLabel.Text = "Celular vinculado. El monitoreo ya está en marcha.";
+		ConfiguracionAndroid.MonitoreoActivo = true;
+		ServicioMonitoreo.Iniciar(AndroidApp.Context);
 	}
 
 	private void OnInicioAutomaticoClicked(object? sender, EventArgs e)

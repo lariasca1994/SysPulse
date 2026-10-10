@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router";
-import { BellRing, Check, RotateCcw, ShieldCheck, UserCheck, UserX, Users, X } from "lucide-react";
+import { BellRing, Check, MonitorSmartphone, RotateCcw, ShieldCheck, UserCheck, UserX, Users, X } from "lucide-react";
+import { Equipos } from "./Equipos";
 import { admin, type ConfiguracionAlertas, type Solicitud, type UmbralAdmin, type UsuarioAdmin } from "../../api/admin";
 import { esFalla } from "../../api/cliente";
 import { useConsulta } from "../../api/useConsulta";
@@ -11,7 +12,7 @@ import { Dialogo } from "../../componentes/ui/Dialogo";
 import h from "../hosts/hosts.module.css";
 import s from "./admin.module.css";
 
-type Pestana = "usuarios" | "solicitudes" | "alertas";
+type Pestana = "equipos" | "usuarios" | "solicitudes" | "alertas";
 
 const ROL: Record<string, string> = { N1: "N1", N2: "N2", N3: "N3", gestor: "Gestor", admin: "Admin" };
 const fecha = (iso: string | null) => (iso ? new Date(iso).toLocaleString("es-CO", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—");
@@ -19,7 +20,7 @@ const fecha = (iso: string | null) => (iso ? new Date(iso).toLocaleString("es-CO
 /** Funciones exclusivas del admin (sección 12): cuentas, rol gestor y alertas. Nada se borra: todo queda en la auditoría. */
 export default function Admin() {
   const { usuario } = useSesion();
-  const [pestana, setPestana] = useState<Pestana>("usuarios");
+  const [pestana, setPestana] = useState<Pestana>("equipos");
   const solicitudes = useConsulta((t) => admin.solicitudes(t), [], 60_000);
   const pendientes = (solicitudes.datos ?? []).filter((x) => x.estado === "pendiente").length;
 
@@ -30,11 +31,12 @@ export default function Admin() {
       <div className={h.encabezado}>
         <div>
           <h1 className={h.titulo}>Administración</h1>
-          <p className={h.subtitulo}>Cuentas, rol gestor y alertas de todos los agentes. Nada se borra: cada cambio queda en la auditoría.</p>
+          <p className={h.subtitulo}>Equipos, cuentas, rol gestor y alertas de todos los agentes. Nada se borra: cada cambio queda en la auditoría.</p>
         </div>
       </div>
 
       <div className={s.pestanas} role="tablist" aria-label="Secciones">
+        <button type="button" role="tab" aria-selected={pestana === "equipos"} onClick={() => setPestana("equipos")}><MonitorSmartphone size={16} aria-hidden="true" /> Equipos</button>
         <button type="button" role="tab" aria-selected={pestana === "usuarios"} onClick={() => setPestana("usuarios")}><Users size={16} aria-hidden="true" /> Usuarios</button>
         <button type="button" role="tab" aria-selected={pestana === "solicitudes"} onClick={() => setPestana("solicitudes")}>
           <ShieldCheck size={16} aria-hidden="true" /> Solicitudes de gestor {pendientes > 0 && <span className={s.contador}>{pendientes}</span>}
@@ -42,6 +44,7 @@ export default function Admin() {
         <button type="button" role="tab" aria-selected={pestana === "alertas"} onClick={() => setPestana("alertas")}><BellRing size={16} aria-hidden="true" /> Alertas</button>
       </div>
 
+      {pestana === "equipos" && <Equipos />}
       {pestana === "usuarios" && <Usuarios miId={usuario.id} />}
       {pestana === "solicitudes" && <Solicitudes datos={solicitudes.datos} error={solicitudes.error} recargar={solicitudes.recargar} />}
       {pestana === "alertas" && <Alertas />}

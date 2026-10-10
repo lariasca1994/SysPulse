@@ -15,5 +15,6 @@
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/SysPulse.AgentInstaller/SysPulse.AgentInstaller.csproj" />
+    <Project Path="tools/SysPulse.Herramientas/SysPulse.Herramientas.csproj" />
   </Folder>
 </Solution>

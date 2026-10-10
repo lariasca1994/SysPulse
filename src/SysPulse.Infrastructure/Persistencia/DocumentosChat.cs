@@ -62,3 +62,34 @@ public sealed class SolicitudRolDoc
     public DateTime Creado { get; set; }
     public DateTime? Resuelto { get; set; }
 }
+
+/// <summary>Código de alta de un equipo (un solo uso, 24 h). Solo se guarda su hash; el código se muestra una vez al admin.</summary>
+public sealed class AltaEquipoDoc
+{
+    [BsonId] public ObjectId Id { get; set; }
+    public string CodigoHash { get; set; } = "";
+    /// <summary>Últimos 4 caracteres, para reconocerlo en la lista sin exponer el código.</summary>
+    public string Pista { get; set; } = "";
+    public ObjectId CreadoPor { get; set; }
+    public string CreadoPorNombre { get; set; } = "";
+    public DateTime Creado { get; set; }
+    public DateTime Expira { get; set; }
+    public bool Usado { get; set; }
+    public DateTime? UsadoEn { get; set; }
+    public string? TipoUsado { get; set; }
+}
+
+/// <summary>
+/// Nombre visible y estado de cada host, fijado la primera vez que aparece ("Equipo portátil 2"): agregar equipos no
+/// cambia el nombre de los existentes. Nunca incluye fabricante ni modelo. Retirar = ocultar sin borrar el historial.
+/// </summary>
+public sealed class HostAliasDoc
+{
+    [BsonId] public string Id { get; set; } = "";
+    public string Clase { get; set; } = "";
+    public int Numero { get; set; }
+    public string Nombre { get; set; } = "";
+    public bool Retirado { get; set; }
+    public DateTime? RetiradoEn { get; set; }
+    public DateTime Creado { get; set; }
+}

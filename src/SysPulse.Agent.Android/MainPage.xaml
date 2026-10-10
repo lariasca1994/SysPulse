@@ -20,6 +20,16 @@
                 </VerticalStackLayout>
             </Border>
 
+            <!-- Alta del celular con el código que genera el admin (Administración → Equipos). -->
+            <Border x:Name="VincularPanel" Padding="16" StrokeShape="RoundRectangle 8" IsVisible="False">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Vincular este celular" FontAttributes="Bold" FontSize="18" />
+                    <Label Text="Escribe el código de alta que te dio el administrador de SysPulse. Sirve una sola vez y vence en 24 horas." FontSize="13" />
+                    <Entry x:Name="CodigoEntry" Placeholder="XXXX-XXXX" MaxLength="9" Keyboard="Text" IsSpellCheckEnabled="False" IsTextPredictionEnabled="False" FontSize="22" HorizontalTextAlignment="Center" />
+                    <Button x:Name="VincularButton" Text="Vincular" Clicked="OnVincularClicked" />
+                </VerticalStackLayout>
+            </Border>
+
             <Label x:Name="MensajeLabel" Text="" />
 
             <Button x:Name="MonitoreoButton" Text="Iniciar monitoreo" Clicked="OnMonitoreoClicked" />
