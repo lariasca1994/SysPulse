@@ -65,6 +65,14 @@ public sealed class ServicioIncidentes(
     /// <summary>Enfriamiento por clave de evento: una alerta intermitente no inunda Telegram ni el correo.</summary>
     public static readonly TimeSpan Enfriamiento = TimeSpan.FromMinutes(30);
 
+    /// <summary>
+    /// Si la misma alerta vuelve antes de este plazo tras una resolución automática, se reabre el mismo incidente
+    /// (es la misma falla que oscila); después de este plazo es un incidente nuevo, con su propio código.
+    /// </summary>
+    public static readonly TimeSpan VentanaReapertura = TimeSpan.FromMinutes(30);
+
+    public const string CierreAutomatico = "Se normalizó sin intervención";
+
     private static readonly string[] EstadosAbiertos =
         [nameof(EstadoIncidente.Nuevo), nameof(EstadoIncidente.Asignado), nameof(EstadoIncidente.EnProgreso), nameof(EstadoIncidente.EnEspera), nameof(EstadoIncidente.Reabierto)];
 
@@ -93,9 +101,28 @@ public sealed class ServicioIncidentes(
         IncidenteDoc? resultado = null;
         if (evento.Severidad == "excepcion" && evento.Tipo is "abierto" or "escalado")
         {
-            resultado = abierto is null
-                ? await CrearDesdeEventoAsync(evento, nombreHost, ct).ConfigureAwait(false)
-                : await ActualizarDesdeEventoAsync(abierto, evento, ct).ConfigureAwait(false);
+            // Incidente anterior a la resolución automática: se normalizó hace rato y nadie lo tomó. Se resuelve
+            // y la alerta nueva abre otro incidente, para que cada falla cuente por separado en las estadísticas.
+            if (abierto is not null && SinAtender(abierto) && abierto.MetricaRecuperada && Ahora - abierto.Actualizado > VentanaReapertura)
+            {
+                await ResolverAutomaticoAsync(abierto, abierto.UltimoValor ?? evento.Valor, nombreHost, avisar: false, ct).ConfigureAwait(false);
+                abierto = null;
+            }
+
+            if (abierto is null)
+            {
+                var desde = Ahora - VentanaReapertura;
+                var reciente = await mongo.Incidentes
+                    .Find(i => i.ClaveDedup == e.ClaveDedup && i.Estado == nameof(EstadoIncidente.Resuelto) && i.CodigoCierre == CierreAutomatico && i.Resuelto >= desde)
+                    .SortByDescending(i => i.Resuelto).FirstOrDefaultAsync(ct).ConfigureAwait(false);
+                resultado = reciente is not null
+                    ? await ReabrirAutomaticoAsync(reciente, evento, nombreHost, ct).ConfigureAwait(false)
+                    : await CrearDesdeEventoAsync(evento, nombreHost, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                resultado = await ActualizarDesdeEventoAsync(abierto, evento, ct).ConfigureAwait(false);
+            }
         }
         else if (evento.Tipo == "cerrado" && abierto is not null)
         {
@@ -157,8 +184,64 @@ public sealed class ServicioIncidentes(
         return await mongo.Incidentes.FindOneAndUpdateAsync(i => i.Id == inc.Id, u, new FindOneAndUpdateOptions<IncidenteDoc> { ReturnDocument = ReturnDocument.After }, ct).ConfigureAwait(false);
     }
 
+    /// <summary>Nadie lo ha tomado ni asignado (nuevo, o reabierto por el monitoreo): el monitoreo puede resolverlo solo.</summary>
+    private static bool SinAtender(IncidenteDoc inc) =>
+        inc.Estado is nameof(EstadoIncidente.Nuevo) or nameof(EstadoIncidente.Reabierto) && inc.AsignadoId is null;
+
+    /// <summary>
+    /// ITIL (gestión de eventos): si la métrica vuelve a la normalidad y nadie trabajaba el incidente, el monitoreo
+    /// lo resuelve con el código "Se normalizó sin intervención". Si alguien lo tiene, sigue abierto para que decida.
+    /// </summary>
+    private async Task<IncidenteDoc> ResolverAutomaticoAsync(IncidenteDoc inc, double valor, string nombreHost, bool avisar, CancellationToken ct)
+    {
+        var ahora = Ahora;
+        var metrica = inc.Metrica ?? "";
+        var texto = $"Resuelto automáticamente por el monitoreo: la métrica volvió a la normalidad ({Etiquetas.Valor(metrica, valor)}) sin intervención.";
+        var u = Builders<IncidenteDoc>.Update
+            .Set(i => i.Estado, nameof(EstadoIncidente.Resuelto)).Set(i => i.Resuelto, ahora)
+            .Set(i => i.PrimeraRespuesta, inc.PrimeraRespuesta ?? ahora)
+            .Set(i => i.CodigoCierre, CierreAutomatico).Set(i => i.Resolucion, texto)
+            .Set(i => i.UltimoValor, valor).Set(i => i.MetricaRecuperada, true).Set(i => i.Actualizado, ahora)
+            .Push(i => i.Historial, new HistorialDoc { Ts = ahora, Tipo = "estado", De = inc.Estado, A = nameof(EstadoIncidente.Resuelto), Texto = texto });
+        var actualizado = await mongo.Incidentes.FindOneAndUpdateAsync(
+            Builders<IncidenteDoc>.Filter.Eq(i => i.Id, inc.Id) & Builders<IncidenteDoc>.Filter.Eq(i => i.Estado, inc.Estado), u,
+            new FindOneAndUpdateOptions<IncidenteDoc> { ReturnDocument = ReturnDocument.After }, ct).ConfigureAwait(false);
+        if (actualizado is null) return inc; // Alguien lo tomó en ese mismo instante: se respeta su trabajo.
+
+        await chat.SistemaAsync(ServicioChat.SalaDeIncidente(inc.Id), $"✅ {texto}", ct).ConfigureAwait(false);
+        if (avisar)
+        {
+            cola.Encolar(AvisoIncidente(actualizado, "cierre", nombreHost,
+                $"✅ {actualizado.Codigo} resuelto automáticamente",
+                [("Equipo", nombreHost), (Etiquetas.Nombre(metrica), Etiquetas.Valor(metrica, valor)), ("Cierre", CierreAutomatico)],
+                niveles: [], usuarios: [.. actualizado.Notificados], cuentasFijas: true, severidad: "informativo"));
+        }
+        return actualizado;
+    }
+
+    /// <summary>La misma alerta volvió poco después de resolverse sola: es la misma falla y se reabre el mismo incidente.</summary>
+    private async Task<IncidenteDoc> ReabrirAutomaticoAsync(IncidenteDoc inc, EventoDoc e, string nombreHost, CancellationToken ct)
+    {
+        var ahora = Ahora;
+        var texto = $"Reabierto por el monitoreo: la métrica volvió a superar el umbral ({Etiquetas.Valor(e.Metrica, e.Valor)}) poco después de normalizarse.";
+        var u = Builders<IncidenteDoc>.Update
+            .Set(i => i.Estado, nameof(EstadoIncidente.Reabierto)).Set(i => i.Resuelto, null)
+            .Set(i => i.CodigoCierre, null).Set(i => i.Resolucion, null).Set(i => i.AvisosSla, [])
+            .Set(i => i.UltimoValor, e.Valor).Set(i => i.MetricaRecuperada, false).Set(i => i.Actualizado, ahora)
+            .Push(i => i.Historial, new HistorialDoc { Ts = ahora, Tipo = "estado", De = inc.Estado, A = nameof(EstadoIncidente.Reabierto), Texto = texto });
+        var actualizado = await mongo.Incidentes.FindOneAndUpdateAsync(i => i.Id == inc.Id, u,
+            new FindOneAndUpdateOptions<IncidenteDoc> { ReturnDocument = ReturnDocument.After }, ct).ConfigureAwait(false);
+        await chat.SistemaAsync(ServicioChat.SalaDeIncidente(inc.Id), $"↩️ {texto}", ct).ConfigureAwait(false);
+        cola.Encolar(AvisoIncidente(actualizado, "reapertura", nombreHost, $"↩️ {actualizado.Codigo} reabierto por el monitoreo",
+            [("Equipo", nombreHost), (Etiquetas.Nombre(e.Metrica), $"{Etiquetas.Valor(e.Metrica, e.Valor)} (umbral {Etiquetas.Valor(e.Metrica, e.Umbral)})")],
+            niveles: [actualizado.Nivel], cuentasFijas: !e.RespaldoEnviado, enfriamiento: Enfriamiento, clave: e.ClaveDedup));
+        return actualizado;
+    }
+
     private async Task<IncidenteDoc> MarcarRecuperadoAsync(IncidenteDoc inc, EventoDoc e, string nombreHost, CancellationToken ct)
     {
+        if (SinAtender(inc)) return await ResolverAutomaticoAsync(inc, e.Valor, nombreHost, avisar: true, ct).ConfigureAwait(false);
+
         var u = Builders<IncidenteDoc>.Update
             .Set(i => i.UltimoValor, e.Valor).Set(i => i.MetricaRecuperada, true).Set(i => i.Actualizado, Ahora)
             .Push(i => i.Historial, new HistorialDoc { Ts = Ahora, Tipo = "sistema", Texto = $"La métrica volvió a la normalidad ({Etiquetas.Valor(e.Metrica, e.Valor)}). El incidente sigue abierto hasta que alguien lo resuelva." });
@@ -384,6 +467,15 @@ public sealed class ServicioIncidentes(
     public async Task<int> RevisarSlaAsync(CancellationToken ct)
     {
         var abiertos = await mongo.Incidentes.Find(i => EstadosAbiertos.Contains(i.Estado)).ToListAsync(ct).ConfigureAwait(false);
+
+        // Incidentes que se normalizaron hace rato sin que nadie los tomara (p. ej. los anteriores a la resolución
+        // automática): se resuelven solos y dejan de consumir SLA.
+        foreach (var inc in abiertos.Where(i => SinAtender(i) && i.MetricaRecuperada && Ahora - i.Actualizado > VentanaReapertura).ToList())
+        {
+            var resuelto = await ResolverAutomaticoAsync(inc, inc.UltimoValor ?? 0, await NombreHostAsync(inc.HostId ?? "", ct).ConfigureAwait(false), avisar: false, ct).ConfigureAwait(false);
+            if (resuelto.Estado == nameof(EstadoIncidente.Resuelto)) abiertos.Remove(inc);
+        }
+
         var enviados = 0;
         foreach (var inc in abiertos)
         {
