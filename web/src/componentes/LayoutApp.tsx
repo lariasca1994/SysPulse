@@ -7,7 +7,7 @@ import { BotonTema } from "./BotonTema";
 import { LimiteError } from "./LimiteError";
 import s from "./LayoutApp.module.css";
 
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:5095";
+import { API_BASE as API_URL } from "../api/base";
 
 const NAVEGACION = [
   { ruta: "/turno", icono: Activity, texto: "Mi turno" },

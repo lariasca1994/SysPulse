@@ -31,3 +31,4 @@ Thumbs.db
 
 # Publicaciones locales
 artifacts/
+!web/.env.production
