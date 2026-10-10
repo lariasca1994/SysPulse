@@ -84,7 +84,7 @@ internal static class Instalacion
         ProtegerCarpetaDatos();
 
         CopiarInstalador();
-        RegistrarTareaActualizacion();
+        RegistrarActualizador();
 
         Paso("Iniciando el servicio");
         Sc($"start {Servicio}");
@@ -112,7 +112,7 @@ internal static class Instalacion
             Paso("Iniciando el servicio");
             Sc($"start {Servicio}");
         }
-        RegistrarTareaActualizacion();
+        RegistrarActualizador();
         Console.WriteLine($"Listo. Estado: {Estado()}.");
         return 0;
     }
@@ -141,7 +141,7 @@ internal static class Instalacion
             Paso("Iniciando el servicio");
             Sc($"start {Servicio}");
         }
-        RegistrarTareaActualizacion();
+        RegistrarActualizador();
         Console.WriteLine();
         Console.WriteLine($"Listo. Estado: {Estado()} · agente v{Actualizador.VersionInstalada()}. Logs en {Path.Combine(CarpetaDatos, "logs")}");
         return 0;
@@ -166,8 +166,13 @@ internal static class Instalacion
 
     public static int Desinstalar(bool purgarDatos)
     {
-        Paso("Eliminando la tarea de actualización automática");
-        Ejecutar("schtasks.exe", ["/Delete", "/TN", Actualizador.Tarea, "/F"]);
+        Paso("Eliminando el servicio de actualización automática");
+        if (Ejecutar("sc.exe", $"query {ServicioActualizador.Nombre}").Codigo == 0)
+        {
+            Sc($"stop {ServicioActualizador.Nombre}");
+            Sc($"delete {ServicioActualizador.Nombre}");
+        }
+        BorrarTareaAntigua();
         if (ServicioExiste())
         {
             Paso("Deteniendo y eliminando el servicio");
@@ -211,16 +216,44 @@ internal static class Instalacion
     }
 
     /// <summary>
-    /// Tarea programada que corre cada hora como SYSTEM: "SysPulse.AgentInstaller.exe auto-actualizar".
-    /// Se crea (o reemplaza) en cada instalación o actualización manual; desde entonces todo es automático.
+    /// Servicio "SysPulse Actualizador" (LocalSystem) que revisa cada hora si hay versión nueva. Se crea o se
+    /// reconfigura en cada instalación o actualización. Reemplaza a la antigua tarea programada, que algunos
+    /// antivirus bloquean (crear tareas programadas como SYSTEM es un patrón típico de malware).
     /// </summary>
-    private static void RegistrarTareaActualizacion()
+    private static void RegistrarActualizador()
     {
-        Paso("Programando la actualización automática (cada hora, como SYSTEM)");
+        Paso("Configurando la actualización automática (servicio SysPulse Actualizador, cada hora)");
         var exe = Path.Combine(CarpetaPrograma, EjecutableInstalador);
-        var (codigo, salida) = Ejecutar("schtasks.exe",
-            ["/Create", "/TN", Actualizador.Tarea, "/TR", $"\"{exe}\" auto-actualizar", "/SC", "HOURLY", "/RU", "SYSTEM", "/RL", "HIGHEST", "/F"]);
-        Console.WriteLine(codigo == 0 ? "   tarea creada: " + Actualizador.Tarea : "   no se pudo crear la tarea: " + salida.Trim());
+        var binPath = $"\"{exe}\" servicio-actualizador";
+        var nombre = ServicioActualizador.Nombre;
+        var existe = Ejecutar("sc.exe", $"query {nombre}").Codigo == 0;
+        var (codigo, salida) = existe
+            ? Ejecutar("sc.exe", ["config", nombre, "binPath=", binPath, "start=", "delayed-auto"])
+            : Ejecutar("sc.exe", ["create", nombre, "binPath=", binPath, "start=", "delayed-auto", "DisplayName=", "SysPulse Actualizador"]);
+        if (codigo != 0)
+        {
+            Console.WriteLine("   no se pudo configurar el servicio actualizador: " + salida.Trim());
+            return;
+        }
+        Sc($"description {nombre} \"SysPulse: instala las versiones nuevas del agente publicadas en GitHub Releases (verifica la huella SHA-256).\"");
+        Sc($"failure {nombre} reset= 86400 actions= restart/60000/restart/60000/restart/300000");
+        BorrarTareaAntigua();
+        Sc($"start {nombre}");
+        Console.WriteLine("   servicio listo: " + nombre);
+    }
+
+    /// <summary>Equipos instalados con la tarea programada: crean el servicio actualizador y borran la tarea.</summary>
+    public static void MigrarAServicioActualizador()
+    {
+        if (Ejecutar("sc.exe", $"query {ServicioActualizador.Nombre}").Codigo != 0) RegistrarActualizador();
+    }
+
+    private static void BorrarTareaAntigua()
+    {
+        if (Ejecutar("schtasks.exe", ["/Query", "/TN", Actualizador.Tarea]).Codigo == 0)
+        {
+            Ejecutar("schtasks.exe", ["/Delete", "/TN", Actualizador.Tarea, "/F"]);
+        }
     }
 
     /// <summary>Lee de un .env solo las claves que usa el agente (instalación de desarrollo).</summary>

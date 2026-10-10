@@ -33,6 +33,9 @@ if (comando == "estado")
     return 0;
 }
 
+// Modo servicio: lo inicia Windows (servicio SysPulseActualizador), no una persona.
+if (comando == "servicio-actualizador") return await ServicioActualizador.EjecutarAsync(args);
+
 if (comando is not ("install" or "update" or "uninstall" or "secretos" or "auto-actualizar"))
 {
     Console.WriteLine(Uso);
@@ -45,7 +48,12 @@ if (!Instalacion.EsAdministrador())
     return 1;
 }
 
-if (comando == "auto-actualizar") return await Actualizador.EjecutarAsync(args.Contains("--solo-comprobar"));
+if (comando == "auto-actualizar")
+{
+    // Equipos que aún usan la tarea programada: pasan al servicio actualizador (la tarea la bloquean antivirus).
+    if (!args.Contains("--solo-comprobar")) Instalacion.MigrarAServicioActualizador();
+    return await Actualizador.EjecutarAsync(args.Contains("--solo-comprobar"));
+}
 
 // El zip publicado trae el agente junto al instalador; en una copia de desarrollo puede estar en la subcarpeta "agent".
 var origen = Path.GetFullPath(Opcion("--desde")

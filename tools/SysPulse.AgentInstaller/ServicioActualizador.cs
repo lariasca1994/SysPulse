@@ -1,0 +1,47 @@
+using System.Runtime.Versioning;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+namespace SysPulse.AgentInstaller;
+
+/// <summary>
+/// Servicio de Windows "SysPulse Actualizador" (LocalSystem): cada hora ejecuta la actualización automática.
+/// Reemplaza a la tarea programada: algunos antivirus (p. ej. el módulo de comportamiento de Kaspersky) tratan
+/// como troyano a un programa sin firma que crea tareas programadas como SYSTEM y revierten toda la instalación.
+/// </summary>
+[SupportedOSPlatform("windows")]
+internal sealed class ServicioActualizador(IHostApplicationLifetime vida) : BackgroundService
+{
+    public const string Nombre = "SysPulseActualizador";
+    private static readonly TimeSpan EsperaInicial = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan Intervalo = TimeSpan.FromHours(1);
+
+    public static async Task<int> EjecutarAsync(string[] args)
+    {
+        var builder = Host.CreateApplicationBuilder(args);
+        builder.Services.AddWindowsService(o => o.ServiceName = Nombre);
+        builder.Services.AddHostedService<ServicioActualizador>();
+        await builder.Build().RunAsync().ConfigureAwait(false);
+        return Environment.ExitCode;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        // Espera inicial: no compite con el arranque del equipo ni del agente.
+        await Task.Delay(EsperaInicial, stoppingToken).ConfigureAwait(false);
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            await Actualizador.EjecutarAsync(soloComprobar: false).ConfigureAwait(false);
+
+            // Si la actualización reemplazó a este mismo ejecutable (queda el anterior como .old), se reinicia
+            // con código de error para que Windows lo vuelva a iniciar ya con la versión nueva.
+            if (Environment.ProcessPath is { } exe && File.Exists(exe + ".old"))
+            {
+                Environment.ExitCode = 1;
+                vida.StopApplication();
+                return;
+            }
+            await Task.Delay(Intervalo, stoppingToken).ConfigureAwait(false);
+        }
+    }
+}

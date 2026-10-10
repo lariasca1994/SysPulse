@@ -8,8 +8,8 @@ using SysPulse.Agent.Core.Envio;
 namespace SysPulse.AgentInstaller;
 
 /// <summary>
-/// Actualización automática del agente de Windows. La ejecuta cada hora una tarea programada como SYSTEM
-/// (el servicio corre sin privilegios y no puede reemplazarse a sí mismo):
+/// Actualización automática del agente de Windows. La ejecuta cada hora el servicio "SysPulse Actualizador"
+/// (LocalSystem; el agente corre sin privilegios y no puede reemplazarse a sí mismo):
 /// 1. lee en la configuración central la versión publicada (URL de GitHub Releases + huella SHA-256);
 /// 2. si es más nueva que la instalada, la descarga a la carpeta temporal de SYSTEM y verifica origen y huella;
 /// 3. detiene el servicio, reemplaza los binarios (incluido este instalador) y lo vuelve a iniciar.

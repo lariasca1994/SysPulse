@@ -6,7 +6,7 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <AssemblyName>SysPulse.Agent</AssemblyName>
     <!-- 1.4.0: alta con código de un solo uso; instalador sin funciones de administración ni secretos. -->
-    <Version>1.5.0</Version>
+    <Version>1.5.1</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
