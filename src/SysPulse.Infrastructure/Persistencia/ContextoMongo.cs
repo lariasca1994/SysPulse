@@ -37,6 +37,11 @@ public sealed class ContextoMongo
         return doc.Valor;
     }
 
+    /// <summary>Sube el contador al menos hasta <paramref name="minimo"/> (nunca lo baja). Repara un contador perdido o reiniciado.</summary>
+    public Task AsegurarMinimoAsync(string secuencia, long minimo, CancellationToken ct) =>
+        Contadores.UpdateOneAsync(Builders<ContadorDoc>.Filter.Eq(c => c.Id, secuencia), Builders<ContadorDoc>.Update.Max(c => c.Valor, minimo),
+            new UpdateOptions { IsUpsert = true }, ct);
+
     public ContextoMongo(string cadenaConexion)
     {
         RegistrarConvenciones();

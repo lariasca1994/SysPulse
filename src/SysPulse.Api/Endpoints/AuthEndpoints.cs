@@ -21,9 +21,18 @@ public static class AuthEndpoints
     {
         var g = app.MapGroup("/api/auth").RequireRateLimiting("auth");
 
-        g.MapPost("/registro", async (SolicitudRegistro s, ServicioCuentas cuentas, HttpContext http, CancellationToken ct) =>
+        g.MapPost("/registro", async (SolicitudRegistro s, ServicioCuentas cuentas, HttpContext http, SysPulse.Api.Servicios.ServicioChat chat,
+            SysPulse.Infrastructure.Notificaciones.ColaNotificaciones cola, OpcionesCuentas web, CancellationToken ct) =>
         {
             var (resultado, errores) = await cuentas.RegistrarAsync(s, Ip(http), ct);
+            if (resultado is not null)
+            {
+                // Aviso al admin: en #operaciones y, si no está conectado, por correo (sin datos de contacto del usuario).
+                await chat.SistemaAsync(SysPulse.Api.Servicios.ServicioChat.Operaciones, $"👋 Se registró una cuenta nueva de nivel {s.Nivel}.", ct);
+                cola.Encolar(SysPulse.Infrastructure.Notificaciones.Aviso.SoloCorreo("usuario-nuevo", $"usuario:{resultado.UsuarioId}",
+                    new SysPulse.Infrastructure.Notificaciones.ContenidoCorreo("[SysPulse] Usuario nuevo registrado", "Se registró un usuario nuevo", "info",
+                        [("Nombre", s.Nombre?.Trim() ?? ""), ("Nivel", s.Nivel ?? "")], $"{web.UrlWeb}/admin", "Ver los usuarios"), admins: true));
+            }
             return resultado is null
                 ? Results.ValidationProblem(errores.ToDictionary(e => e.Key, e => new[] { e.Value }), title: "Revisa los datos del registro.")
                 : Results.Created($"/api/usuarios/{resultado.UsuarioId}", resultado);

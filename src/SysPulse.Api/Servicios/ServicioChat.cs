@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using SysPulse.Api.Hubs;
+using SysPulse.Infrastructure.Notificaciones;
 using SysPulse.Infrastructure.Persistencia;
 
 namespace SysPulse.Api.Servicios;
@@ -20,7 +21,7 @@ public sealed record PersonaConectada(string Id, string Nombre, string Rol);
 /// incidente se registran como mensajes de sistema, así la conversación y la trazabilidad quedan juntas.
 /// Los mensajes se difunden a todos los conectados (equipo pequeño): cada cliente decide qué mostrar.
 /// </summary>
-public sealed class ServicioChat(ContextoMongo mongo, IHubContext<ChatHub> hub, TimeProvider reloj)
+public sealed class ServicioChat(ContextoMongo mongo, IHubContext<ChatHub> hub, ColaNotificaciones cola, SysPulse.Infrastructure.Cuentas.OpcionesCuentas opcionesCuentas, TimeProvider reloj) : IPresencia
 {
     public const string Operaciones = "operaciones";
     public const int MaxTexto = 2000;
@@ -51,6 +52,8 @@ public sealed class ServicioChat(ContextoMongo mongo, IHubContext<ChatHub> hub, 
         }
         return Presentes();
     }
+
+    public bool Conectado(string usuarioId) => _presentes.ContainsKey(usuarioId);
 
     public IReadOnlyList<PersonaConectada> Presentes() => [.. _presentes.Values.Select(v => v.Persona).OrderBy(p => p.Nombre, StringComparer.CurrentCulture)];
 
@@ -130,6 +133,7 @@ public sealed class ServicioChat(ContextoMongo mongo, IHubContext<ChatHub> hub, 
             SalaId = salaId, Tipo = "humano", AutorId = ObjectId.Parse(autor.Id), AutorNombre = autor.Nombre, AutorRol = autor.Rol, Texto = limpio, Ts = Ahora,
         };
         await GuardarYDifundirAsync(m, ct).ConfigureAwait(false);
+        await AvisarPorCorreoAsync(sala, autor, limpio, ct).ConfigureAwait(false);
         return Vista(m);
     }
 
@@ -144,6 +148,28 @@ public sealed class ServicioChat(ContextoMongo mongo, IHubContext<ChatHub> hub, 
         catch (MongoException)
         {
             // El incidente ya quedó registrado; el mensaje de sala es complementario.
+        }
+    }
+
+    /// <summary>Enfriamiento del aviso por correo: como máximo uno por sala y persona cada 30 minutos.</summary>
+    public static readonly TimeSpan EnfriamientoCorreoChat = TimeSpan.FromMinutes(30);
+
+    /// <summary>
+    /// Aviso administrativo por correo de un mensaje nuevo, solo a quienes no están conectados (los conectados ya lo ven
+    /// en vivo) y con enfriamiento por sala y persona, para no llenar el correo ni agotar la cuota diaria.
+    /// </summary>
+    private async Task AvisarPorCorreoAsync(SalaDoc sala, PersonaConectada autor, string texto, CancellationToken ct)
+    {
+        var conectados = _presentes.Keys.ToHashSet(StringComparer.Ordinal);
+        var autorId = ObjectId.Parse(autor.Id);
+        var destinatarios = await mongo.Usuarios.Find(u => u.Activo && u.EmailVerificado && u.Id != autorId).ToListAsync(ct).ConfigureAwait(false);
+        var nombreSala = sala.Tipo == "general" ? "#operaciones" : sala.Titulo;
+        var extracto = texto.Length > 300 ? texto[..300] + "…" : texto;
+        foreach (var u in destinatarios.Where(u => !conectados.Contains(u.Id.ToString())))
+        {
+            var contenido = new ContenidoCorreo($"[SysPulse] Mensaje nuevo en {nombreSala}", $"Mensaje nuevo en {nombreSala}", "info",
+                [("De", autor.Nombre), ("Mensaje", extracto)], $"{opcionesCuentas.UrlWeb}/salas/{sala.Id}", "Abrir la sala");
+            cola.Encolar(Aviso.SoloCorreo("chat", $"chat:{sala.Id}:{u.Id}", contenido, [u.Id], enfriamiento: EnfriamientoCorreoChat));
         }
     }
 

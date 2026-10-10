@@ -37,7 +37,8 @@ public sealed partial class ServicioAdmin(
     PublicadorAtlas atlas,
     Auditoria auditoria,
     ClienteTelegram telegram,
-    ServicioCorreo correo,
+    ColaNotificaciones cola,
+    ServicioChat chat,
     OpcionesCuentas opciones,
     TimeProvider reloj)
 {
@@ -86,11 +87,12 @@ public sealed partial class ServicioAdmin(
         }, cancellationToken: ct).ConfigureAwait(false);
         await auditoria.RegistrarAsync("cuenta.gestor_solicitado", usuario.Id, null, texto, ct: ct).ConfigureAwait(false);
 
-        // Aviso al admin por Telegram (si lo tiene verificado): tiene una solicitud por revisar.
-        foreach (var admin in await mongo.Usuarios.Find(u => u.Rol == Roles.Admin && u.Activo).ToListAsync(ct).ConfigureAwait(false))
-        {
-            await AvisarAsync(admin, $"📝 SysPulse: {usuario.Nombre} ({usuario.Rol}) solicitó el rol gestor.\nRevísala en {opciones.UrlWeb}/admin", null, ct).ConfigureAwait(false);
-        }
+        // Aviso al admin: en #operaciones (si está conectado lo ve ahí) y por correo solo si no está conectado.
+        await chat.SistemaAsync(ServicioChat.Operaciones, $"📝 Hay una solicitud de rol gestor pendiente de revisión ({usuario.Rol}).", ct).ConfigureAwait(false);
+        cola.Encolar(Aviso.SoloCorreo("gestor-solicitud", $"gestor:{usuario.Id}:{Ahora:yyyyMMddHHmm}", new ContenidoCorreo(
+            "[SysPulse] Solicitud de rol gestor", "Hay una solicitud de rol gestor pendiente", "info",
+            [("Solicitante", usuario.Nombre), ("Nivel actual", usuario.Rol), ("Motivo", texto.Length > 300 ? texto[..300] + "…" : texto)],
+            $"{opciones.UrlWeb}/admin", "Revisar la solicitud"), admins: true));
         return null;
     }
 
@@ -124,7 +126,7 @@ public sealed partial class ServicioAdmin(
             var mensaje = aprobar
                 ? $"✅ SysPulse: tu solicitud de rol gestor fue aprobada por {adminNombre}. Vuelve a iniciar sesión para usar tus nuevos permisos."
                 : $"SysPulse: tu solicitud de rol gestor fue rechazada por {adminNombre}. Motivo: {comentario}";
-            await AvisarAsync(usuario, mensaje, aprobar ? "Tu solicitud de rol gestor fue aprobada" : "Tu solicitud de rol gestor fue rechazada", ct).ConfigureAwait(false);
+            await AvisarAsync(usuario, mensaje, ct).ConfigureAwait(false);
         }
         return null;
     }
@@ -141,7 +143,7 @@ public sealed partial class ServicioAdmin(
         await mongo.SolicitudesRol.UpdateManyAsync(x => x.UsuarioId == id && x.Estado == "aprobada",
             Builders<SolicitudRolDoc>.Update.Set(x => x.Estado, "revocada"), cancellationToken: ct).ConfigureAwait(false);
         await auditoria.RegistrarAsync("admin.gestor_revocado", adminId, null, $"vuelve a {nivel}", "usuario", usuarioId, ct).ConfigureAwait(false);
-        await AvisarAsync(u, $"SysPulse: el administrador revocó tu rol gestor. Vuelves a tu nivel {nivel}.", "Cambio de rol en SysPulse", ct).ConfigureAwait(false);
+        await AvisarAsync(u, $"SysPulse: el administrador revocó tu rol gestor. Vuelves a tu nivel {nivel}.", ct).ConfigureAwait(false);
         return null;
     }
 
@@ -191,16 +193,12 @@ public sealed partial class ServicioAdmin(
 
     // ───────────── Apoyo ─────────────
 
-    private async Task AvisarAsync(UsuarioDoc u, string texto, string? asuntoCorreo, CancellationToken ct)
+    /// <summary>Decisiones sobre el rol (aprobada, rechazada, revocada): solo por Telegram, sin gastar la cuota de correo.</summary>
+    private async Task AvisarAsync(UsuarioDoc u, string texto, CancellationToken ct)
     {
         try
         {
-            if (u.Telegram is { Verificado: true, ChatId: { } chat }) await telegram.EnviarAsync(chat, texto, ct: ct).ConfigureAwait(false);
-            if (asuntoCorreo is not null && u.EmailVerificado)
-            {
-                var (asunto, html, plano) = PlantillasCorreo.Aviso(new ContenidoCorreo($"[SysPulse] {asuntoCorreo}", asuntoCorreo, "info", [("Detalle", texto)], $"{opciones.UrlWeb}/perfil", "Abrir mi cuenta"));
-                await correo.EnviarAsync(u.Email, asunto, html, plano, ct).ConfigureAwait(false);
-            }
+            if (u.Telegram is { Verificado: true, ChatId: { } chatId }) await telegram.EnviarAsync(chatId, texto, ct: ct).ConfigureAwait(false);
         }
         catch (HttpRequestException)
         {

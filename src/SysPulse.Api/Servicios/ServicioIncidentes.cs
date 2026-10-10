@@ -531,8 +531,22 @@ public sealed class ServicioIncidentes(
         [.. d.Esperas.Select(e => new PeriodoEspera(new DateTimeOffset(e.Inicio, TimeSpan.Zero), e.Fin is { } f ? new DateTimeOffset(f, TimeSpan.Zero) : null))]),
         reloj.GetUtcNow());
 
-    private async Task<string> NuevoCodigoAsync(CancellationToken ct) =>
-        $"INC-{(await mongo.SiguienteAsync("incidentes", ct).ConfigureAwait(false)).ToString("0000", CultureInfo.InvariantCulture)}";
+    /// <summary>
+    /// Código correlativo e irrepetible (INC-0001, INC-0002…). Si el contador se perdió o quedó atrasado, se alinea con el
+    /// mayor código existente antes de reintentar; el índice único sobre el código es la última barrera.
+    /// </summary>
+    private async Task<string> NuevoCodigoAsync(CancellationToken ct)
+    {
+        for (var intento = 0; ; intento++)
+        {
+            var codigo = $"INC-{(await mongo.SiguienteAsync("incidentes", ct).ConfigureAwait(false)).ToString("0000", CultureInfo.InvariantCulture)}";
+            if (intento >= 3 || !await mongo.Incidentes.Find(i => i.Codigo == codigo).AnyAsync(ct).ConfigureAwait(false)) return codigo;
+            var recientes = await mongo.Incidentes.Find(FilterDefinition<IncidenteDoc>.Empty).SortByDescending(i => i.Id).Limit(200)
+                .Project(i => i.Codigo).ToListAsync(ct).ConfigureAwait(false);
+            var mayor = recientes.Select(c => long.TryParse(c?.Replace("INC-", "", StringComparison.Ordinal), NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : 0).DefaultIfEmpty(0).Max();
+            await mongo.AsegurarMinimoAsync("incidentes", mayor, ct).ConfigureAwait(false);
+        }
+    }
 
     private async Task<string> NombreHostAsync(string hostId, CancellationToken ct) =>
         (await hosts.ListarAsync(ct).ConfigureAwait(false)).FirstOrDefault(h => h.Id == hostId)?.Nombre ?? "Equipo monitoreado";

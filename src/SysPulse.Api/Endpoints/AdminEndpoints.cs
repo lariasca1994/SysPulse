@@ -73,10 +73,21 @@ public static class EquiposEndpoints
             return error is null ? Results.Ok(new { ok = true }) : Results.Problem(error, statusCode: 400);
         });
 
-        g.MapPost("/equipos/{id}/retiro", async (string id, RetiroEquipo r, ClaimsPrincipal u, ServicioHosts h, SysPulse.Infrastructure.Persistencia.Auditoria a, CancellationToken ct) =>
+        g.MapPost("/equipos/{id}/retiro", async (string id, RetiroEquipo r, ClaimsPrincipal u, ServicioHosts h, SysPulse.Infrastructure.Persistencia.Auditoria a,
+            SysPulse.Infrastructure.Notificaciones.ColaNotificaciones cola, SysPulse.Infrastructure.Cuentas.OpcionesCuentas web, ServicioChat chat, CancellationToken ct) =>
         {
             var error = await h.RetirarAsync(id, r.Retirar, ct);
-            if (error is null) await a.RegistrarAsync(r.Retirar ? "admin.equipo_retirado" : "admin.equipo_restaurado", ObjectId.Parse(u.FindFirstValue(JwtRegisteredClaimNames.Sub)!), null, null, "host", id, ct);
+            if (error is null)
+            {
+                await a.RegistrarAsync(r.Retirar ? "admin.equipo_retirado" : "admin.equipo_restaurado", ObjectId.Parse(u.FindFirstValue(JwtRegisteredClaimNames.Sub)!), null, null, "host", id, ct);
+                var nombre = (await h.EquiposAsync(ct)).FirstOrDefault(x => x.Id == id)?.Nombre ?? "Equipo";
+                var accion = r.Retirar ? "retirado" : "restaurado";
+                await chat.SistemaAsync(ServicioChat.Operaciones, r.Retirar ? $"🗄️ {nombre} fue retirado de la operación (su historial se conserva)." : $"♻️ {nombre} volvió a la operación.", ct);
+                // Correo solo al desactivar (retirar), y solo a los admins que no están conectados.
+                if (r.Retirar) cola.Encolar(SysPulse.Infrastructure.Notificaciones.Aviso.SoloCorreo($"equipo-{accion}", $"equipo:{id}:{accion}:{DateTime.UtcNow:yyyyMMddHHmm}",
+                    new SysPulse.Infrastructure.Notificaciones.ContenidoCorreo($"[SysPulse] Equipo {accion}: {nombre}", $"Equipo {accion}", r.Retirar ? "advertencia" : "ok",
+                        [("Equipo", nombre), ("Por", u.FindFirstValue(JwtRegisteredClaimNames.Name) ?? "Admin")], $"{web.UrlWeb}/admin", "Ver los equipos"), admins: true));
+            }
             return error is null ? Results.Ok(new { ok = true }) : Results.Problem(error, statusCode: 400);
         });
 

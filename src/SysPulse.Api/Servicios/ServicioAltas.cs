@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using SysPulse.Contracts;
+using SysPulse.Infrastructure.Notificaciones;
 using SysPulse.Infrastructure.Persistencia;
 using SysPulse.Infrastructure.Seguridad;
 
@@ -17,7 +18,7 @@ public sealed record CodigoAltaVista(string Pista, string CreadoPor, DateTime Cr
 /// secretos: el admin genera un código (24 h), el equipo lo canjea una vez y recibe su configuración por HTTPS.
 /// Del código solo se guarda su huella: ni la base ni los registros permiten reconstruirlo.
 /// </summary>
-public sealed class ServicioAltas(ContextoMongo mongo, OpcionesAlta opciones, Auditoria auditoria, TimeProvider reloj)
+public sealed class ServicioAltas(ContextoMongo mongo, OpcionesAlta opciones, Auditoria auditoria, ColaNotificaciones cola, SysPulse.Infrastructure.Cuentas.OpcionesCuentas opcionesCuentas, ServicioChat chat, TimeProvider reloj)
 {
     public static readonly TimeSpan Vigencia = TimeSpan.FromHours(24);
     // Sin caracteres que se confunden al leerlos o dictarlos (0/O, 1/I/L).
@@ -71,6 +72,12 @@ public sealed class ServicioAltas(ContextoMongo mongo, OpcionesAlta opciones, Au
         }
 
         await auditoria.RegistrarAsync("alta.equipo_vinculado", null, ip, $"{tipo} · código ····-{alta.Pista}", ct: ct).ConfigureAwait(false);
+        var plataforma = tipo == "android" ? "Celular Android" : "Equipo Windows";
+        cola.Encolar(Aviso.SoloCorreo("equipo-alta", $"alta:{alta.Id}", new ContenidoCorreo(
+            $"[SysPulse] Equipo vinculado: {plataforma}", "Se vinculó un equipo nuevo", "ok",
+            [("Tipo", plataforma), ("Código usado", $"····-{alta.Pista}"), ("Generado por", alta.CreadoPorNombre)],
+            $"{opcionesCuentas.UrlWeb}/admin", "Ver los equipos"), admins: true));
+        await chat.SistemaAsync(ServicioChat.Operaciones, $"🆕 Se vinculó un equipo nuevo ({plataforma}). Aparecerá en Salud de hosts con su primer reporte.", ct).ConfigureAwait(false);
         return new RespuestaAlta(mongoUri, opciones.ApiPublica, opciones.AgentApiKey, opciones.TelegramBotToken, opciones.TelegramChatIds);
     }
 }

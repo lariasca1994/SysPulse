@@ -32,7 +32,25 @@ public sealed record Aviso(
     bool CuentasFijas,
     string TextoTelegram,
     ContenidoCorreo Correo,
-    TimeSpan? Enfriamiento = null);
+    TimeSpan? Enfriamiento = null,
+    bool PorTelegram = true,
+    bool PorCorreo = false,
+    bool SoloDesconectados = false)
+{
+    /// <summary>
+    /// Aviso administrativo solo por correo (chat, equipos, solicitudes de rol). Las alertas, incidentes y
+    /// escalamientos van solo por Telegram.
+    /// </summary>
+    /// Solo llega a quien NO está conectado: quien está en línea lo ve en #operaciones o en el chat (ahorra la cuota de Brevo).
+    public static Aviso SoloCorreo(string motivo, string clave, ContenidoCorreo correo, IReadOnlyList<ObjectId>? usuarios = null, bool admins = false, TimeSpan? enfriamiento = null) =>
+        new(motivo, clave, null, "informativo", false, [], false, admins, usuarios ?? [], false, "", correo, enfriamiento, PorTelegram: false, PorCorreo: true, SoloDesconectados: true);
+}
+
+/// <summary>Quién está conectado ahora mismo a la plataforma (lo implementa el hub de salas).</summary>
+public interface IPresencia
+{
+    bool Conectado(string usuarioId);
+}
 
 public sealed record ContenidoCorreo(string Asunto, string Titulo, string Tono, IReadOnlyList<(string Etiqueta, string Valor)> Filas, string? Enlace, string? TextoEnlace);
 
@@ -57,6 +75,7 @@ public sealed partial class DespachadorNotificaciones(
     ClienteTelegram telegram,
     ServicioCorreo correo,
     OpcionesNotificaciones opciones,
+    IPresencia presencia,
     ILogger<DespachadorNotificaciones> logger)
 {
     /// <summary>Telegram admite ~1 mensaje por segundo por chat; entre chats distintos basta una pausa corta.</summary>
@@ -75,13 +94,13 @@ public sealed partial class DespachadorNotificaciones(
         var registros = new List<NotificacionDoc>();
         var chatsUsuarios = new HashSet<long>();
 
-        foreach (var u in usuarios.Where(u => u.Telegram is { Verificado: true, ChatId: not null }))
+        foreach (var u in usuarios.Where(u => aviso.PorTelegram && u.Telegram is { Verificado: true, ChatId: not null }))
         {
             chatsUsuarios.Add(u.Telegram.ChatId!.Value);
             registros.Add(Registro(aviso, "telegram", u.Id.ToString(), await EnviarTelegramAsync(u.Telegram.ChatId.Value, aviso.TextoTelegram, ct).ConfigureAwait(false)));
         }
 
-        if (aviso.CuentasFijas)
+        if (aviso.PorTelegram && aviso.CuentasFijas)
         {
             // Una cuenta fija que además es usuario registrado ya lo recibió arriba.
             foreach (var chat in opciones.ChatsFijos.Where(c => !chatsUsuarios.Contains(c)))
@@ -90,10 +109,11 @@ public sealed partial class DespachadorNotificaciones(
             }
         }
 
-        if (aviso.Severidad == "excepcion" || aviso.EsP1)
+        // Correo: solo avisos administrativos. Con la cuota diaria casi agotada (Brevo: 300/día) se omiten los del chat.
+        if (aviso.PorCorreo && !(aviso.Motivo.StartsWith("chat", StringComparison.Ordinal) && await CuotaCasiAgotadaAsync(ct).ConfigureAwait(false)))
         {
             var (asunto, html, texto) = PlantillasCorreo.Aviso(aviso.Correo);
-            foreach (var u in usuarios.Where(u => u.EmailVerificado))
+            foreach (var u in usuarios.Where(u => u.EmailVerificado && !(aviso.SoloDesconectados && presencia.Conectado(u.Id.ToString()))))
             {
                 var ok = await IntentarAsync(() => correo.EnviarAsync(u.Email, asunto, html, texto, ct)).ConfigureAwait(false);
                 registros.Add(Registro(aviso, "correo", u.Id.ToString(), ok));
@@ -125,6 +145,16 @@ public sealed partial class DespachadorNotificaciones(
         var filtro = f.Eq(u => u.Activo, true) & (f.In(u => u.Rol, roles) | f.In(u => u.Id, aviso.Usuarios));
         if (roles.Count == 0 && aviso.Usuarios.Count == 0) return [];
         return await mongo.Usuarios.Find(filtro).ToListAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Tope diario de correos antes de dejar de enviar los del chat (Brevo gratuito: 300/día).</summary>
+    private const int LimiteCorreosDiario = 100;
+
+    private async Task<bool> CuotaCasiAgotadaAsync(CancellationToken ct)
+    {
+        var hoy = DateTime.UtcNow.Date;
+        var enviados = await mongo.Notificaciones.CountDocumentsAsync(n => n.Canal == "correo" && n.Enviado && n.Ts >= hoy, cancellationToken: ct).ConfigureAwait(false);
+        return enviados >= LimiteCorreosDiario;
     }
 
     private async Task<bool> EnEnfriamientoAsync(Aviso aviso, TimeSpan enfriamiento, CancellationToken ct)

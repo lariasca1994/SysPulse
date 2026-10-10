@@ -45,6 +45,8 @@ builder.Services.AddScoped<ServicioCuentas>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ServicioHosts>();
 builder.Services.AddSingleton<ServicioChat>();
+// El despachador consulta quién está conectado para no enviar correos a quien ya lo ve en la plataforma.
+builder.Services.AddSingleton<IPresencia>(sp => sp.GetRequiredService<ServicioChat>());
 builder.Services.AddScoped<ServicioIncidentes>();
 builder.Services.AddScoped<ServicioAnalitica>();
 builder.Services.AddScoped<ServicioAdmin>();
