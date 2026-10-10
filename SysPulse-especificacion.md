@@ -851,6 +851,13 @@ La API de bots de Telegram **no permite que un bot escriba primero** a un @usuar
 | Agente Android | Cada celular Android que se agregue, 24/7 | `dotnet publish -f net10.0-android` → APK firmado con keystore propio (gratis) → GitHub Releases → instalación manual |
 | Dominio | Subdominios gratuitos `*.onrender.com` y `*.vercel.app` | Dominio propio omitido (tiene costo) |
 
+### Alta de equipos y seguridad de los instaladores
+
+- **Alta con código:** el admin genera en la web (Administración → Equipos) un código de un solo uso que vence en 24 h; solo se guarda su huella. El instalador de Windows (`install --codigo`) y la app Android (Vincular) lo canjean en `POST /api/agentes/alta` (limitado por IP) y reciben su configuración, que guardan cifrada (DPAPI / Android Keystore).
+- **Instaladores públicos sin secretos ni funciones de administración:** las herramientas de administración (`config-central`, `publicar-version`, `mongo-estandar`) viven en `tools/SysPulse.Herramientas`, que no se publica. Los binarios se compilan sin rutas del equipo de compilación y el APK sin modo de depuración. `tools/escanear-secretos.ps1` es obligatorio antes de cada publicación.
+- **Nombres estables:** cada equipo recibe un nombre genérico con número fijo por tipo (colección `hosts_alias`); agregar equipos no renombra a los existentes. Retirar un equipo lo oculta sin borrar su historial.
+- **Usuario de base exclusivo para agentes (recomendado):** si se definen `MONGO_URI_AGENTES` y `MONGO_URI_AGENTES_ANDROID` en Render, las altas entregan esas credenciales en lugar de las de la API.
+
 ### Orden de despliegue
 
 1. **Repositorio:** `git init`, repo público en GitHub, ramas protegidas (`main` solo por PR con CI en verde).
