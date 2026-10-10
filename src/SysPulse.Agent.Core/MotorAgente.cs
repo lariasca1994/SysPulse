@@ -52,7 +52,7 @@ public sealed partial class MotorAgente(
     public async Task EjecutarAsync(string version, IEnumerable<Umbral> umbralesExtra, CancellationToken ct)
     {
         _umbralesBase = [.. opciones.Umbrales.Concat(umbralesExtra)];
-        _evaluador = new EvaluadorAlertas(opciones.HostId, _umbralesBase);
+        _evaluador = new EvaluadorAlertas(opciones.HostId, _umbralesBase, opciones.PersistenciaAlertas);
         _ventanaActual = Agregador.InicioVentana(DateTimeOffset.UtcNow, opciones.VentanaAgregado);
         _apiUrl = opciones.ApiUrl;
         _apiKey = opciones.AgentApiKey;
@@ -182,6 +182,7 @@ public sealed partial class MotorAgente(
 
         var umbrales = config.Combinar(_umbralesBase, opciones.TipoHost);
         _evaluador.ActualizarUmbrales(umbrales);
+        _evaluador.Persistencia = config.PersistenciaMinutos is > 0 and <= 120 ? TimeSpan.FromMinutes(config.PersistenciaMinutos.Value) : opciones.PersistenciaAlertas;
         _configAplicada = config.Actualizado;
         LogConfiguracion(origen, chats.Count, config.Umbrales.Count, config.Actualizado);
         ConfiguracionAplicada?.Invoke(config);

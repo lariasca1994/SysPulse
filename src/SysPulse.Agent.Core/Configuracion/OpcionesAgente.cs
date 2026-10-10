@@ -28,6 +28,9 @@ public sealed class OpcionesAgente
     /// <summary>Cada cuánto se relee la configuración central en Atlas (cuentas de Telegram, umbrales).</summary>
     public TimeSpan IntervaloConfiguracion { get; set; } = TimeSpan.FromMinutes(5);
 
+    /// <summary>Una alerta solo se abre, escala o cierra si la condición se mantiene este tiempo (evita la "lluvia" de avisos). Se puede cambiar desde la configuración central.</summary>
+    public TimeSpan PersistenciaAlertas { get; set; } = TimeSpan.FromMinutes(8);
+
     /// <summary>Destinos de los chequeos de red (solo handshake TCP, nunca login).</summary>
     public IReadOnlyList<string> DestinosTcp { get; set; } = ["1.1.1.1:443", "8.8.8.8:53"];
     public IReadOnlyList<string> DestinosPing { get; set; } = ["8.8.8.8", "1.1.1.1"];

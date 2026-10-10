@@ -141,6 +141,7 @@ public sealed class PublicadorAtlas
             { "umbrales", umbrales },
             { "actualizacion_windows", PaqueteABson(config.ActualizacionWindows) },
             { "actualizacion_android", PaqueteABson(config.ActualizacionAndroid) },
+            { "persistencia_minutos", config.PersistenciaMinutos is null ? BsonNull.Value : config.PersistenciaMinutos.Value },
             { "actualizado", DateTime.UtcNow },
         };
         await _metricas.Database.GetCollection<BsonDocument>(Configuracion.ConfiguracionCentral.Coleccion)
@@ -175,6 +176,7 @@ public sealed class PublicadorAtlas
             Umbrales = umbrales,
             ActualizacionWindows = PaqueteDesdeBson(d, "actualizacion_windows"),
             ActualizacionAndroid = PaqueteDesdeBson(d, "actualizacion_android"),
+            PersistenciaMinutos = d.TryGetValue("persistencia_minutos", out var pm) && pm.IsNumeric ? pm.ToInt32() : null,
             Actualizado = actualizado,
         };
     }

@@ -41,6 +41,8 @@ public sealed record ConfiguracionCentral
     public PaqueteActualizacion? ActualizacionWindows { get; init; }
     /// <summary>Versión disponible del agente Android (se descarga sola; la persona confirma la instalación).</summary>
     public PaqueteActualizacion? ActualizacionAndroid { get; init; }
+    /// <summary>Minutos que una condición debe persistir antes de abrir, escalar o cerrar una alerta. Nulo: el valor del agente (8).</summary>
+    public int? PersistenciaMinutos { get; init; }
     public DateTimeOffset Actualizado { get; init; }
 
     /// <summary>Umbrales efectivos para un tipo de host: los locales por defecto, reemplazados por los centrales de la misma métrica.</summary>

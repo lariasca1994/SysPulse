@@ -142,6 +142,7 @@ static async Task<int> ConfigCentralAsync(string? rutaEnv)
         Umbrales = actual?.Umbrales ?? [],
         ActualizacionWindows = actual?.ActualizacionWindows,
         ActualizacionAndroid = actual?.ActualizacionAndroid,
+        PersistenciaMinutos = actual?.PersistenciaMinutos,
     };
     await atlas.GuardarConfiguracionAsync(nueva, CancellationToken.None);
     Console.WriteLine($"Configuración central publicada: {chats.Length} cuenta(s) de Telegram, token {(nueva.TelegramBotToken is null ? "sin cambios (no está en el .env)" : "incluido")}, API {(nueva.ApiUrl ?? "sin configurar (solo respaldo por Telegram)")}, clave de agente {(nueva.AgentApiKey is null ? "no" : "incluida")}, {nueva.Umbrales.Count} umbral(es) personalizados.");
