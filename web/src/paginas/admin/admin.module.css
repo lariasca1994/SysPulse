@@ -1,0 +1,317 @@
+.pestanas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.pestanas button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: -1px;
+  padding: var(--sp-3) var(--sp-4);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-14);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.pestanas button:hover {
+  color: var(--text);
+}
+
+.pestanas button[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+
+.contador {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--pulse);
+  color: #FFFFFF;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.panel {
+  padding: var(--sp-4) var(--sp-6) var(--sp-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.bloque {
+  margin-bottom: var(--sp-4);
+}
+
+.nota {
+  margin-bottom: var(--sp-4);
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+  line-height: 1.5;
+}
+
+.vacio {
+  padding: var(--sp-6) 0;
+  color: var(--text-subtle);
+  text-align: center;
+}
+
+.tenue {
+  color: var(--text-subtle);
+  font-size: var(--fs-12);
+}
+
+.desplazable {
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-13);
+}
+
+.tabla th {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tabla td {
+  padding: 10px var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.tabla tr:last-child td {
+  border-bottom: 0;
+}
+
+.tabla tr[data-inactivo] td {
+  opacity: 0.6;
+}
+
+.rol {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--role-admin);
+  font-size: var(--fs-12);
+  font-weight: 700;
+}
+
+.rol[data-rol="N1"] { color: var(--role-n1); }
+.rol[data-rol="N2"] { color: var(--role-n2); }
+.rol[data-rol="N3"] { color: var(--role-n3); }
+.rol[data-rol="gestor"] { color: var(--role-gestor); background: var(--role-gestor-bg); }
+
+.si { color: var(--ok); }
+.no { color: var(--text-subtle); }
+
+.estado {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.estado[data-activo="false"] {
+  background: var(--surface-2);
+  color: var(--text-subtle);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+.pieDialogo {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.formulario {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+/* ───── Solicitudes ───── */
+.solicitudes {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.solicitudes li {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warning-fill);
+  border-radius: var(--radius-md);
+}
+
+.solicitudes li:not([data-estado="pendiente"]) {
+  border-left-color: var(--border-strong);
+}
+
+.solicitudCabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.estadoSolicitud {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.estadoSolicitud[data-estado="aprobada"] { background: var(--ok-soft); color: var(--ok); }
+.estadoSolicitud[data-estado="rechazada"],
+.estadoSolicitud[data-estado="revocada"] { background: var(--surface-2); color: var(--text-muted); }
+
+.motivo {
+  font-size: var(--fs-14);
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+/* ───── Alertas ───── */
+.persistencia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
+  padding: var(--sp-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.persistencia label {
+  display: grid;
+  gap: 2px;
+  max-width: 620px;
+}
+
+.campoMinutos {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text-muted);
+}
+
+.campoMinutos input,
+.numero {
+  width: 88px;
+  min-height: 36px;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+  text-align: right;
+}
+
+.numero[data-nivel="excepcion"] {
+  border-left: 3px solid var(--critical);
+}
+
+.numero[data-nivel="advertencia"] {
+  border-left: 3px solid var(--warning-fill);
+}
+
+.numero[data-nivel="recuperacion"] {
+  border-left: 3px solid var(--ok);
+}
+
+.campoMinutos input:focus-visible,
+.numero:focus-visible {
+  border-color: var(--link);
+  outline: 2px solid color-mix(in srgb, var(--link) 25%, transparent);
+  outline-offset: 0;
+}
+
+.grupo {
+  margin-bottom: var(--sp-6);
+}
+
+.tituloGrupo {
+  margin-bottom: var(--sp-2);
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.personalizado {
+  margin-left: var(--sp-2);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--info-soft);
+  color: var(--info);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.restablecer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .panel {
+    padding: var(--sp-3) var(--sp-3) var(--sp-4);
+  }
+
+  .pestanas button {
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-13);
+  }
+}
+
+.cargando {
+  height: 320px;
+}

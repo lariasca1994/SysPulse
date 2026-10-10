@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
-import { Activity, AlertTriangle, BarChart3, Download, LogOut, MessagesSquare, Monitor } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, Download, LogOut, MessagesSquare, Monitor, Settings } from "lucide-react";
 import { useInstalacion } from "../pwa";
 import { useSesion } from "../sesionContexto";
 import { BotonTema } from "./BotonTema";
@@ -52,7 +52,7 @@ export function LayoutApp() {
         </div>
         <nav aria-label="Navegación principal">
           <ul className={s.menu}>
-            {NAVEGACION.map(({ ruta, icono: Icono, texto }) => (
+            {(usuario?.rol === "admin" ? [...NAVEGACION, { ruta: "/admin", icono: Settings, texto: "Administración" }] : NAVEGACION).map(({ ruta, icono: Icono, texto }) => (
               <li key={ruta}>
                 <NavLink to={ruta} className={s.item} title={texto}>
                   <Icono size={18} aria-hidden="true" />

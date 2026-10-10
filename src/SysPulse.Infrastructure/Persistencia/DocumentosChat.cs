@@ -43,3 +43,22 @@ public sealed class LecturaDoc
     public ObjectId UsuarioId { get; set; }
     public ObjectId UltimoLeido { get; set; }
 }
+
+/// <summary>
+/// Solicitud del rol gestor (sección 12): la pide un técnico N1/N2/N3 y solo el admin la aprueba o rechaza.
+/// Estado: pendiente | aprobada | rechazada | revocada. Nunca se borra.
+/// </summary>
+public sealed class SolicitudRolDoc
+{
+    [BsonId] public ObjectId Id { get; set; }
+    public ObjectId UsuarioId { get; set; }
+    public string UsuarioNombre { get; set; } = "";
+    public string NivelActual { get; set; } = "N1";
+    public string Motivo { get; set; } = "";
+    public string Estado { get; set; } = "pendiente";
+    public ObjectId? ResueltoPor { get; set; }
+    public string? ResueltoPorNombre { get; set; }
+    public string? Comentario { get; set; }
+    public DateTime Creado { get; set; }
+    public DateTime? Resuelto { get; set; }
+}

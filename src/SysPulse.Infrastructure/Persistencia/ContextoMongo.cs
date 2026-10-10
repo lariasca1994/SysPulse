@@ -22,6 +22,7 @@ public sealed class ContextoMongo
     public IMongoCollection<SalaDoc> Salas => Db.GetCollection<SalaDoc>("salas");
     public IMongoCollection<MensajeDoc> Mensajes => Db.GetCollection<MensajeDoc>("mensajes");
     public IMongoCollection<LecturaDoc> Lecturas => Db.GetCollection<LecturaDoc>("salas_lectura");
+    public IMongoCollection<SolicitudRolDoc> SolicitudesRol => Db.GetCollection<SolicitudRolDoc>("solicitudes_rol");
 
     /// <summary>Siguiente número de una secuencia (atómico).</summary>
     public async Task<long> SiguienteAsync(string secuencia, CancellationToken ct)

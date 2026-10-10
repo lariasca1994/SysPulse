@@ -47,6 +47,8 @@ builder.Services.AddSingleton<ServicioHosts>();
 builder.Services.AddSingleton<ServicioChat>();
 builder.Services.AddScoped<ServicioIncidentes>();
 builder.Services.AddScoped<ServicioAnalitica>();
+builder.Services.AddScoped<ServicioAdmin>();
+builder.Services.AddSingleton(new SysPulse.Agent.Core.Envio.PublicadorAtlas(Requerida("MONGO_URI")));
 
 // Notificaciones (sección 7): cola en memoria + envío en segundo plano. Las cuentas fijas reciben todo.
 var chatsFijos = (config["TELEGRAM_FIXED_CHAT_IDS"] ?? "")
@@ -134,6 +136,7 @@ app.MapHosts();
 app.MapIncidentes(config["AGENT_API_KEY"]);
 app.MapSalas();
 app.MapAnalitica();
+app.MapAdmin();
 app.MapHub<SysPulse.Api.Hubs.ChatHub>("/hubs/chat");
 app.MapTelegram(config["TELEGRAM_WEBHOOK_SECRET"]);
 

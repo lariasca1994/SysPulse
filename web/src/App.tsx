@@ -21,6 +21,7 @@ const OlvidePassword = lazy(() => import("./paginas/acceso/OlvidePassword"));
 const Restablecer = lazy(() => import("./paginas/acceso/Restablecer"));
 const Perfil = lazy(() => import("./paginas/Perfil"));
 const Salas = lazy(() => import("./paginas/salas/Salas"));
+const Admin = lazy(() => import("./paginas/admin/Admin"));
 const Analitica = lazy(() => import("./paginas/analitica/Analitica"));
 
 function Protegida({ children }: { children: ReactNode }) {
@@ -57,6 +58,7 @@ export default function App() {
               <Route path="/turno" element={<Suspense fallback={null}><MiTurno /></Suspense>} />
               <Route path="/salas" element={<Suspense fallback={null}><Salas /></Suspense>} />
               <Route path="/salas/:id" element={<Suspense fallback={null}><Salas /></Suspense>} />
+              <Route path="/admin" element={<Suspense fallback={null}><Admin /></Suspense>} />
               <Route path="/perfil" element={<Suspense fallback={null}><Perfil /></Suspense>} />
               <Route path="/analitica" element={<Suspense fallback={null}><Analitica /></Suspense>} />
             </Route>

@@ -30,6 +30,10 @@ export async function get<T>(ruta: string, token?: string): Promise<T> {
   return solicitar<T>("GET", ruta, undefined, token);
 }
 
+export async function put<T>(ruta: string, cuerpo: unknown, token?: string): Promise<T> {
+  return solicitar<T>("PUT", ruta, cuerpo, token);
+}
+
 async function solicitar<T>(metodo: string, ruta: string, cuerpo: unknown, token?: string): Promise<T> {
   let respuesta: Response;
   try {
@@ -46,21 +50,23 @@ async function solicitar<T>(metodo: string, ruta: string, cuerpo: unknown, token
   }
 
   const texto = await respuesta.text();
-  const json = texto ? (JSON.parse(texto) as Record<string, unknown>) : {};
+  // 204 (sin contenido) llega vacío: se devuelve null.
+  const json = texto ? (JSON.parse(texto) as Record<string, unknown>) : null;
   if (respuesta.ok) return json as T;
+  const cuerpoError: Record<string, unknown> = json ?? {};
 
   const campos: Record<string, string> = {};
-  const errores = json.errors as Record<string, string[]> | undefined;
+  const errores = cuerpoError.errors as Record<string, string[]> | undefined;
   if (errores) for (const [campo, lista] of Object.entries(errores)) campos[campo.toLowerCase()] = lista[0];
 
   const mensaje =
-    (json.detail as string | undefined) ??
-    (json.mensaje as string | undefined) ??
+    (cuerpoError.detail as string | undefined) ??
+    (cuerpoError.mensaje as string | undefined) ??
     (respuesta.status === 429 ? "Demasiados intentos seguidos. Espera un minuto." : undefined) ??
-    (json.title as string | undefined) ??
+    (cuerpoError.title as string | undefined) ??
     "Ocurrió un error inesperado.";
 
-  throw new FallaApi({ estado: respuesta.status, mensaje, campos, datos: json });
+  throw new FallaApi({ estado: respuesta.status, mensaje, campos, datos: cuerpoError });
 }
 
 export function esFalla(e: unknown): e is FallaApi {

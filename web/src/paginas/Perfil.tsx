@@ -7,6 +7,7 @@ import { Alerta, Boton } from "../componentes/ui/Basicos";
 import { CampoPassword } from "../componentes/ui/Campos";
 import h from "./hosts/hosts.module.css";
 import { CambiarAutenticador } from "./CambiarAutenticador";
+import { SolicitarGestor } from "./SolicitarGestor";
 import s from "./Perfil.module.css";
 
 const ROL: Record<string, string> = {
@@ -103,6 +104,7 @@ export default function Perfil() {
           </form>
         </section>
         <CambiarAutenticador />
+        {["N1", "N2", "N3"].includes(usuario.rol) && <SolicitarGestor />}
       </div>
     </>
   );
