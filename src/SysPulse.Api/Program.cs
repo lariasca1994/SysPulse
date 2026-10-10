@@ -44,7 +44,9 @@ builder.Services.AddSingleton(new OpcionesCuentas(config["WEB_URL"] ?? "http://l
 builder.Services.AddScoped<ServicioCuentas>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ServicioHosts>();
+builder.Services.AddSingleton<ServicioChat>();
 builder.Services.AddScoped<ServicioIncidentes>();
+builder.Services.AddScoped<ServicioAnalitica>();
 
 // Notificaciones (sección 7): cola en memoria + envío en segundo plano. Las cuentas fijas reciben todo.
 var chatsFijos = (config["TELEGRAM_FIXED_CHAT_IDS"] ?? "")
@@ -115,6 +117,7 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     if (!string.IsNullOrWhiteSpace(corsOrigin)) p.WithOrigins(corsOrigin).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
 }));
 builder.Services.AddProblemDetails();
+builder.Services.AddSignalR(o => o.MaximumReceiveMessageSize = 16 * 1024);
 
 var app = builder.Build();
 
@@ -129,6 +132,9 @@ app.MapGet("/health", () => Results.Ok(new { estado = "ok" }));
 app.MapAuth();
 app.MapHosts();
 app.MapIncidentes(config["AGENT_API_KEY"]);
+app.MapSalas();
+app.MapAnalitica();
+app.MapHub<SysPulse.Api.Hubs.ChatHub>("/hubs/chat");
 app.MapTelegram(config["TELEGRAM_WEBHOOK_SECRET"]);
 
 app.Run();

@@ -344,6 +344,66 @@ public sealed class ServicioCuentas(
         return recuperacion;
     }
 
+    /// <summary>
+    /// Cambiar de app autenticadora (teléfono nuevo) desde "Mi cuenta". Exige contraseña y el código actual (o uno de
+    /// recuperación, si se perdió el teléfono). El secreto nuevo queda pendiente 10 minutos: el actual sigue valiendo
+    /// hasta que se confirme con un código de la app nueva.
+    /// </summary>
+    public async Task<(ConfiguracionMfa? Configuracion, string? Error)> IniciarCambioMfaAsync(UsuarioDoc usuario, string? password, string? codigo, string? ip, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(usuario);
+        if (string.IsNullOrEmpty(password) || _hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, password) == PasswordVerificationResult.Failed)
+        {
+            await auditoria.RegistrarAsync("cuenta.mfa_cambio_fallido", usuario.Id, ip, "contraseña", ct: ct).ConfigureAwait(false);
+            return (null, "La contraseña no es correcta.");
+        }
+        if (!await VerificarMfaAsync(usuario, codigo, ip, ct, "mfa_cambio").ConfigureAwait(false))
+            return (null, "El código actual no es correcto.");
+
+        var secreto = Mfa.NuevoSecreto();
+        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
+            .Set(u => u.Mfa.SecretoPendienteCifrado, cifrado.Cifrar(secreto))
+            .Set(u => u.Mfa.PendienteExpira, DateTime.UtcNow.AddMinutes(10)), cancellationToken: ct).ConfigureAwait(false);
+        return (new ConfiguracionMfa(secreto, Mfa.UriConfiguracion(secreto, usuario.Email)), null);
+    }
+
+    /// <summary>Confirma la app nueva: reemplaza el secreto, genera códigos de recuperación nuevos y cierra las demás sesiones.</summary>
+    public async Task<(IReadOnlyList<string>? Codigos, string? Error)> ConfirmarCambioMfaAsync(UsuarioDoc usuario, string? codigo, string? ip, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(usuario);
+        var actual = await db.Usuarios.Find(u => u.Id == usuario.Id).FirstOrDefaultAsync(ct).ConfigureAwait(false);
+        if (actual?.Mfa.SecretoPendienteCifrado is null || actual.Mfa.PendienteExpira < DateTime.UtcNow)
+            return (null, "El proceso venció (10 minutos). Empieza de nuevo.");
+        var secreto = cifrado.Descifrar(actual.Mfa.SecretoPendienteCifrado);
+        var paso = Mfa.Verificar(secreto, codigo, 0);
+        if (paso is null) return (null, "El código de la app nueva no es correcto. Revisa que hayas escaneado el QR nuevo.");
+
+        var recuperacion = Mfa.CodigosRecuperacion();
+        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
+            .Set(u => u.Mfa.SecretoCifrado, actual.Mfa.SecretoPendienteCifrado)
+            .Set(u => u.Mfa.SecretoPendienteCifrado, null)
+            .Set(u => u.Mfa.PendienteExpira, null)
+            .Set(u => u.Mfa.Activo, true)
+            .Set(u => u.Mfa.UltimoPaso, paso.Value)
+            .Set(u => u.Mfa.CodigosRecuperacionHash, recuperacion.Select(c => Cifrado.Hash(Mfa.NormalizarCodigoRecuperacion(c))).ToList())
+            .Set(u => u.SelloSeguridad, Guid.NewGuid().ToString("N")), cancellationToken: ct).ConfigureAwait(false);
+        await auditoria.RegistrarAsync("cuenta.mfa_cambiado", usuario.Id, ip, ct: ct).ConfigureAwait(false);
+        if (usuario.Telegram is { Verificado: true, ChatId: { } chat })
+        {
+            try
+            {
+                await telegram.EnviarAsync(chat,
+                    $"🔐 SysPulse: se configuró una app autenticadora nueva en tu cuenta ({DateTime.UtcNow:dd/MM HH:mm} UTC). La anterior ya no sirve y se cerraron las demás sesiones.\nSi no fuiste tú, avisa al administrador de inmediato.",
+                    ct: ct).ConfigureAwait(false);
+            }
+            catch (HttpRequestException)
+            {
+                // El cambio ya se aplicó; el aviso es complementario.
+            }
+        }
+        return (recuperacion, null);
+    }
+
     /// <summary>Verifica el segundo factor: código de la app o un código de recuperación (se consume).</summary>
     public async Task<bool> VerificarMfaAsync(UsuarioDoc usuario, string? codigo, string? ip, CancellationToken ct, string evento = "login")
     {

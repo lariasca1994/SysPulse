@@ -39,6 +39,9 @@ public sealed class TelegramDoc
 public sealed class MfaDoc
 {
     public string? SecretoCifrado { get; set; }
+    /// <summary>Secreto nuevo mientras se configura otra app autenticadora: reemplaza al actual solo al confirmarse.</summary>
+    public string? SecretoPendienteCifrado { get; set; }
+    public DateTime? PendienteExpira { get; set; }
     public bool Activo { get; set; }
     public List<string> CodigosRecuperacionHash { get; set; } = [];
     /// <summary>Último paso TOTP aceptado: impide reutilizar el mismo código.</summary>

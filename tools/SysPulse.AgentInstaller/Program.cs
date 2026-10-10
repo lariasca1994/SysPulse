@@ -176,6 +176,18 @@ static async Task<int> PublicarVersionAsync(string? rutaEnv, string? zipWindows,
     var paquete = new PaqueteActualizacion(version, url, SysPulse.Agent.Core.Actualizaciones.VerificadorPaquete.Huella(archivo), codigoAndroid);
     var nueva = zipWindows is not null ? actual with { ActualizacionWindows = paquete } : actual with { ActualizacionAndroid = paquete };
     await atlas.GuardarConfiguracionAsync(nueva, CancellationToken.None);
+
+    // ITIL (habilitación de cambios): cada versión publicada queda registrada como cambio estándar preaprobado.
+    var plataforma = zipWindows is not null ? "Windows" : "Android";
+    var urlMongo = MongoDB.Driver.MongoUrl.Create(mongo);
+    await new MongoDB.Driver.MongoClient(urlMongo).GetDatabase(urlMongo.DatabaseName ?? "syspulse")
+        .GetCollection<MongoDB.Bson.BsonDocument>("cambios")
+        .InsertOneAsync(new MongoDB.Bson.BsonDocument
+        {
+            { "tipo", "estandar" }, { "componente", $"agente-{plataforma.ToLowerInvariant()}" },
+            { "titulo", $"Agente {plataforma} {version}" }, { "version", version }, { "url", url }, { "sha256", paquete.Sha256 },
+            { "estado", "Implementado" }, { "origen", "publicar-version" }, { "creado", DateTime.UtcNow },
+        });
     Console.WriteLine($"Versión {version} publicada para {(zipWindows is not null ? "Windows" : "Android")}. Huella SHA-256: {paquete.Sha256}");
     Console.WriteLine(zipWindows is not null
         ? "Los equipos Windows se actualizarán solos en la próxima hora."

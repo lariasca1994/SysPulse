@@ -44,6 +44,10 @@ export const auth = {
   yo: (token: string) => get<Perfil>("/api/auth/yo", token),
   cambiarPasswordConSesion: (token: string, actual: string, nueva: string) =>
     post<{ sesion: Sesion }>("/api/auth/password/cambiar", { actual, nueva }, token),
+  cambiarMfaIniciar: (token: string, password: string, codigo: string) =>
+    post<{ secreto: string; uri: string }>("/api/auth/mfa/cambiar/iniciar", { password, codigo }, token),
+  cambiarMfaConfirmar: (token: string, codigo: string) =>
+    post<{ codigosRecuperacion: string[]; sesion: Sesion }>("/api/auth/mfa/cambiar/confirmar", { codigo }, token),
   olvidePassword: (email: string) =>
     post<{ mensaje: string; enlaceDesarrollo: string | null }>("/api/auth/password/olvide", { email }),
   restablecerPassword: (token: string, nueva: string, codigo: string) =>

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import {
-  ArrowLeft, ArrowUpCircle, CheckCircle2, Flag, Hand, MessageSquare, Monitor, Pause, Play, RotateCcw, Send, ShieldAlert, UserPlus, XCircle,
+  ArrowLeft, ArrowUpCircle, CheckCircle2, Flag, Hand, MessageSquare, MessagesSquare, Monitor, Pause, Play, RotateCcw, Send, ShieldAlert, UserPlus, XCircle,
 } from "lucide-react";
 import { CODIGOS_CIERRE, incidentes, type Accion, type DatosAccion, type EntradaHistorial, type Incidente, type Prioridad } from "../../api/incidentes";
 import { esFalla } from "../../api/cliente";
@@ -88,6 +88,7 @@ export default function DetalleIncidente() {
         </div>
 
         <div className={d.acciones}>
+          <Link to={`/salas/inc-${inc.id}`} className={d.sala}><MessagesSquare size={16} aria-hidden="true" /> Sala</Link>
           {puede("Tomar") && <Boton cargando={ocupado === "Tomar"} onClick={() => void ejecutar("Tomar")}><Hand size={16} aria-hidden="true" /> Tomar</Boton>}
           {puede("Iniciar") && <Boton cargando={ocupado === "Iniciar"} onClick={() => void ejecutar("Iniciar")}><Play size={16} aria-hidden="true" /> Iniciar trabajo</Boton>}
           {puede("Reanudar") && <Boton cargando={ocupado === "Reanudar"} onClick={() => void ejecutar("Reanudar")}><Play size={16} aria-hidden="true" /> Reanudar</Boton>}

@@ -20,7 +20,8 @@ const MiTurno = lazy(() => import("./paginas/incidentes/MiTurno"));
 const OlvidePassword = lazy(() => import("./paginas/acceso/OlvidePassword"));
 const Restablecer = lazy(() => import("./paginas/acceso/Restablecer"));
 const Perfil = lazy(() => import("./paginas/Perfil"));
-const Proximamente = lazy(() => import("./paginas/Proximamente"));
+const Salas = lazy(() => import("./paginas/salas/Salas"));
+const Analitica = lazy(() => import("./paginas/analitica/Analitica"));
 
 function Protegida({ children }: { children: ReactNode }) {
   const { sesion } = useSesion();
@@ -54,9 +55,10 @@ export default function App() {
               <Route path="/incidentes" element={<Suspense fallback={null}><Incidentes /></Suspense>} />
               <Route path="/incidentes/:id" element={<Suspense fallback={null}><DetalleIncidente /></Suspense>} />
               <Route path="/turno" element={<Suspense fallback={null}><MiTurno /></Suspense>} />
-              <Route path="/salas" element={<Suspense fallback={null}><Proximamente seccion="salas" /></Suspense>} />
+              <Route path="/salas" element={<Suspense fallback={null}><Salas /></Suspense>} />
+              <Route path="/salas/:id" element={<Suspense fallback={null}><Salas /></Suspense>} />
               <Route path="/perfil" element={<Suspense fallback={null}><Perfil /></Suspense>} />
-              <Route path="/analitica" element={<Suspense fallback={null}><Proximamente seccion="analitica" /></Suspense>} />
+              <Route path="/analitica" element={<Suspense fallback={null}><Analitica /></Suspense>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

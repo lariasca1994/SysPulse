@@ -6,6 +6,7 @@ import { useSesion } from "../sesionContexto";
 import { Alerta, Boton } from "../componentes/ui/Basicos";
 import { CampoPassword } from "../componentes/ui/Campos";
 import h from "./hosts/hosts.module.css";
+import { CambiarAutenticador } from "./CambiarAutenticador";
 import s from "./Perfil.module.css";
 
 const ROL: Record<string, string> = {
@@ -101,6 +102,7 @@ export default function Perfil() {
             </div>
           </form>
         </section>
+        <CambiarAutenticador />
       </div>
     </>
   );

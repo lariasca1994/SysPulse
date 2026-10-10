@@ -19,6 +19,9 @@ public sealed class ContextoMongo
     public IMongoCollection<EventoDoc> Eventos => Db.GetCollection<EventoDoc>("eventos");
     public IMongoCollection<NotificacionDoc> Notificaciones => Db.GetCollection<NotificacionDoc>("notificaciones");
     public IMongoCollection<ContadorDoc> Contadores => Db.GetCollection<ContadorDoc>("contadores");
+    public IMongoCollection<SalaDoc> Salas => Db.GetCollection<SalaDoc>("salas");
+    public IMongoCollection<MensajeDoc> Mensajes => Db.GetCollection<MensajeDoc>("mensajes");
+    public IMongoCollection<LecturaDoc> Lecturas => Db.GetCollection<LecturaDoc>("salas_lectura");
 
     /// <summary>Siguiente número de una secuencia (atómico).</summary>
     public async Task<long> SiguienteAsync(string secuencia, CancellationToken ct)
@@ -78,6 +81,13 @@ public sealed class ContextoMongo
             // Los eventos crudos se conservan 90 días, igual que las métricas.
             new CreateIndexModel<EventoDoc>(Builders<EventoDoc>.IndexKeys.Ascending(e => e.Recibido), new CreateIndexOptions { Name = "ttl_90d", ExpireAfter = TimeSpan.FromDays(90) }),
         ], ct).ConfigureAwait(false);
+
+        await Mensajes.Indexes.CreateOneAsync(
+            new CreateIndexModel<MensajeDoc>(Builders<MensajeDoc>.IndexKeys.Ascending(m => m.SalaId).Descending(m => m.Id), new CreateIndexOptions { Name = "sala_id" }),
+            cancellationToken: ct).ConfigureAwait(false);
+        await Salas.Indexes.CreateOneAsync(
+            new CreateIndexModel<SalaDoc>(Builders<SalaDoc>.IndexKeys.Descending(s => s.UltimaActividad), new CreateIndexOptions { Name = "actividad" }),
+            cancellationToken: ct).ConfigureAwait(false);
 
         await Notificaciones.Indexes.CreateManyAsync(
         [

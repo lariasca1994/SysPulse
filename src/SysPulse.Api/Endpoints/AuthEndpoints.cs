@@ -119,6 +119,25 @@ public static class AuthEndpoints
             return Results.Ok(new { sesion = Sesion(actualizado!, tokens) });
         }).RequireAuthorization();
 
+        // ───── Cambiar de app autenticadora (Mi cuenta) ─────
+        g.MapPost("/mfa/cambiar/iniciar", async (CambioMfaInicio s, ClaimsPrincipal user, ServicioCuentas cuentas, HttpContext http, CancellationToken ct) =>
+        {
+            var usuario = await cuentas.BuscarAsync(user.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "", ct);
+            if (usuario is null) return Results.Unauthorized();
+            var (config, error) = await cuentas.IniciarCambioMfaAsync(usuario, s.Password, s.Codigo, Ip(http), ct);
+            return error is not null ? Results.Problem(error, statusCode: 400) : Results.Ok(new { secreto = config!.Secreto, uri = config.UriQr });
+        }).RequireAuthorization();
+
+        g.MapPost("/mfa/cambiar/confirmar", async (PasoSolicitud s, ClaimsPrincipal user, ServicioCuentas cuentas, Tokens tokens, HttpContext http, CancellationToken ct) =>
+        {
+            var usuario = await cuentas.BuscarAsync(user.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "", ct);
+            if (usuario is null) return Results.Unauthorized();
+            var (codigos, error) = await cuentas.ConfirmarCambioMfaAsync(usuario, s.Codigo, Ip(http), ct);
+            if (error is not null) return Results.Problem(error, statusCode: 400);
+            var actualizado = await cuentas.BuscarAsync(usuario.Id.ToString(), ct);
+            return Results.Ok(new { codigosRecuperacion = codigos, sesion = Sesion(actualizado!, tokens) });
+        }).RequireAuthorization();
+
         // Respuesta idéntica exista o no el correo (no revela cuentas). En desarrollo devuelve el enlace (correo simulado).
         g.MapPost("/password/olvide", async (OlvidePasswordSolicitud s, ServicioCuentas cuentas, HttpContext http, CancellationToken ct) =>
         {
@@ -162,5 +181,6 @@ public static class AuthEndpoints
 public sealed record VerificarCorreoSolicitud(string? Token);
 public sealed record CambioPasswordConSesion(string? Actual, string? Nueva);
 public sealed record OlvidePasswordSolicitud(string? Email);
+public sealed record CambioMfaInicio(string? Password, string? Codigo);
 public sealed record RestablecerPasswordSolicitud(string? Token, string? Nueva, string? Codigo);
 public sealed record NuevoEnlaceSolicitud(string? UsuarioId);

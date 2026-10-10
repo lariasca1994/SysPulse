@@ -59,6 +59,7 @@ public sealed class ServicioIncidentes(
     ColaNotificaciones cola,
     Auditoria auditoria,
     OpcionesCuentas opcionesCuentas,
+    ServicioChat chat,
     TimeProvider reloj)
 {
     /// <summary>Enfriamiento por clave de evento: una alerta intermitente no inunda Telegram ni el correo.</summary>
@@ -130,6 +131,7 @@ public sealed class ServicioIncidentes(
             Historial = [new HistorialDoc { Ts = ahora, Tipo = "sistema", Texto = $"Incidente creado por el monitoreo de {nombreHost}." }],
         };
         await mongo.Incidentes.InsertOneAsync(inc, cancellationToken: ct).ConfigureAwait(false);
+        await RegistrarAperturaEnChatAsync(inc, $"Creado por el monitoreo de {nombreHost}: {Etiquetas.Nombre(e.Metrica)} en {Etiquetas.Valor(e.Metrica, e.Valor)} (umbral {Etiquetas.Valor(e.Metrica, e.Umbral)}).", ct).ConfigureAwait(false);
 
         var sla = Sla(inc);
         cola.Encolar(AvisoIncidente(inc, "apertura", nombreHost,
@@ -161,6 +163,7 @@ public sealed class ServicioIncidentes(
             .Set(i => i.UltimoValor, e.Valor).Set(i => i.MetricaRecuperada, true).Set(i => i.Actualizado, Ahora)
             .Push(i => i.Historial, new HistorialDoc { Ts = Ahora, Tipo = "sistema", Texto = $"La métrica volvió a la normalidad ({Etiquetas.Valor(e.Metrica, e.Valor)}). El incidente sigue abierto hasta que alguien lo resuelva." });
         var actualizado = await mongo.Incidentes.FindOneAndUpdateAsync(i => i.Id == inc.Id, u, new FindOneAndUpdateOptions<IncidenteDoc> { ReturnDocument = ReturnDocument.After }, ct).ConfigureAwait(false);
+        await chat.SistemaAsync(ServicioChat.SalaDeIncidente(inc.Id), $"✅ La métrica volvió a la normalidad ({Etiquetas.Valor(e.Metrica, e.Valor)}). El incidente sigue abierto hasta que alguien lo resuelva.", ct).ConfigureAwait(false);
 
         cola.Encolar(AvisoIncidente(actualizado, "recuperacion", nombreHost,
             $"✅ {actualizado.Codigo}: la métrica se normalizó",
@@ -235,6 +238,7 @@ public sealed class ServicioIncidentes(
             Historial = [new HistorialDoc { Ts = ahora, Tipo = "sistema", UsuarioId = ObjectId.Parse(actor.Id), UsuarioNombre = nombreActor, Texto = "Registró el incidente." }],
         };
         await mongo.Incidentes.InsertOneAsync(inc, cancellationToken: ct).ConfigureAwait(false);
+        await RegistrarAperturaEnChatAsync(inc, $"Registrado manualmente por {nombreActor}.", ct).ConfigureAwait(false);
         await auditoria.RegistrarAsync("incidente.crear", ObjectId.Parse(actor.Id), null, inc.Codigo, "incidente", inc.Id.ToString(), ct).ConfigureAwait(false);
 
         var nombreHost = inc.HostId is null ? null : await NombreHostAsync(inc.HostId, ct).ConfigureAwait(false);
@@ -367,6 +371,7 @@ public sealed class ServicioIncidentes(
                 $"{inc.Codigo}: {estadoAnterior} → {destino}{(texto is null ? "" : $" · {texto}")}", "incidente", inc.Id.ToString(), ct).ConfigureAwait(false);
         }
         if (aviso is not null) cola.Encolar(aviso);
+        await RegistrarAccionEnChatAsync(actualizado, accion, nombreActor, texto, h, ct).ConfigureAwait(false);
         return (await VistasAsync([actualizado], actor, true, ct).ConfigureAwait(false))[0];
     }
 
@@ -399,6 +404,8 @@ public sealed class ServicioIncidentes(
                     $"{(vencido ? "⛔" : "⏰")} {inc.Codigo}: {TextoSla(marca)}",
                     [("Título", inc.Titulo), ("Nivel", inc.Nivel), ("Vence", Hora(estadoSla.Vence))],
                     niveles: [], usuarios: inc.AsignadoId is { } a ? [a] : [], cuentasFijas: true, gestores: true));
+                await chat.SistemaAsync(ServicioChat.SalaDeIncidente(inc.Id), $"{(vencido ? "⛔" : "⏰")} SLA: {TextoSla(marca)}.", ct).ConfigureAwait(false);
+                if (vencido) await chat.SistemaAsync(ServicioChat.Operaciones, $"⛔ {inc.Codigo} ({inc.Prioridad}): {TextoSla(marca)}.", ct).ConfigureAwait(false);
                 enviados++;
             }
         }
@@ -412,6 +419,52 @@ public sealed class ServicioIncidentes(
         "resolucion-75" => "75 % del tiempo de resolución consumido",
         _ => "venció el tiempo de resolución; escalamiento al gestor",
     };
+
+    // ───────────── Registro en el chat (mesa de servicio) ─────────────
+
+    private async Task RegistrarAperturaEnChatAsync(IncidenteDoc inc, string origen, CancellationToken ct)
+    {
+        await chat.CrearSalaIncidenteAsync(inc, ct).ConfigureAwait(false);
+        await chat.SistemaAsync(ServicioChat.SalaDeIncidente(inc.Id),
+            $"🔴 {inc.Codigo} · {inc.Prioridad} · nivel {inc.Nivel}. {origen} Responder antes de {Hora(Sla(inc).Respuesta.Vence)}.", ct).ConfigureAwait(false);
+        await chat.SistemaAsync(ServicioChat.Operaciones, $"🔴 Nuevo incidente {inc.Codigo} ({inc.Prioridad}): {inc.Titulo}", ct).ConfigureAwait(false);
+    }
+
+    private async Task RegistrarAccionEnChatAsync(IncidenteDoc inc, AccionIncidente accion, string quien, string? texto, HistorialDoc h, CancellationToken ct)
+    {
+        var sala = ServicioChat.SalaDeIncidente(inc.Id);
+        var motivo = string.IsNullOrWhiteSpace(texto) ? "" : $": {texto}";
+        var mensaje = accion switch
+        {
+            AccionIncidente.Tomar => $"✋ {quien} tomó el incidente.",
+            AccionIncidente.Asignar => $"📌 {quien} asignó el incidente a {h.A}.",
+            AccionIncidente.Iniciar => $"▶️ {quien} inició el trabajo.",
+            AccionIncidente.Pausar => $"⏸️ {quien} lo puso en espera{motivo}. El SLA de resolución queda en pausa.",
+            AccionIncidente.Reanudar => $"▶️ {quien} reanudó el trabajo.",
+            AccionIncidente.Escalar => $"⬆️ {quien} escaló el incidente de {h.De} a {h.A}{motivo}",
+            AccionIncidente.CambiarPrioridad => $"🚩 {quien} cambió la prioridad de {h.De} a {h.A}{motivo}",
+            AccionIncidente.Resolver => $"✅ {quien} resolvió el incidente ({inc.CodigoCierre}){motivo}",
+            AccionIncidente.Cerrar => $"🔒 {quien} cerró el incidente. La sala queda de solo lectura.",
+            AccionIncidente.Reabrir => $"↩️ {quien} reabrió el incidente{motivo}",
+            _ => null, // Los comentarios quedan en el historial formal, no se duplican en el chat.
+        };
+        if (mensaje is null) return;
+        await chat.SistemaAsync(sala, mensaje, ct).ConfigureAwait(false);
+
+        // En #operaciones solo lo que el equipo completo debe saber.
+        var general = accion switch
+        {
+            AccionIncidente.Escalar => $"⬆️ {inc.Codigo} escalado a {h.A}: {inc.Titulo}",
+            AccionIncidente.CambiarPrioridad when h.A == nameof(Prioridad.P1) => $"🚨 {inc.Codigo} declarado P1: {inc.Titulo}",
+            AccionIncidente.Resolver => $"✅ {inc.Codigo} resuelto por {quien}: {inc.Titulo}",
+            AccionIncidente.Reabrir => $"↩️ {inc.Codigo} reabierto: {inc.Titulo}",
+            _ => null,
+        };
+        if (general is not null) await chat.SistemaAsync(ServicioChat.Operaciones, general, ct).ConfigureAwait(false);
+
+        if (accion == AccionIncidente.Cerrar) await chat.SoloLecturaAsync(inc.Id, true, ct).ConfigureAwait(false);
+        if (accion == AccionIncidente.Reabrir) await chat.SoloLecturaAsync(inc.Id, false, ct).ConfigureAwait(false);
+    }
 
     // ───────────── Apoyo ─────────────
 
