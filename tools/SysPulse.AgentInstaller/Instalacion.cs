@@ -320,9 +320,37 @@ internal static class Instalacion
     private static void Detener()
     {
         Sc($"stop {Servicio}");
-        for (var i = 0; i < 30 && !Estado().Contains("STOPPED", StringComparison.OrdinalIgnoreCase) && !Estado().StartsWith('1'); i++)
+        for (var i = 0; i < 45 && !Estado().Contains("STOPPED", StringComparison.OrdinalIgnoreCase) && !Estado().StartsWith('1'); i++)
         {
             Thread.Sleep(1000);
+        }
+
+        // Windows marca el servicio como detenido un momento antes de que el proceso libere sus archivos
+        // (p. ej. e_sqlite3.dll): se espera a que el proceso del agente termine y, si no lo hace, se cierra.
+        var agente = Path.GetFullPath(Path.Combine(CarpetaPrograma, Ejecutable));
+        foreach (var proceso in System.Diagnostics.Process.GetProcessesByName(Path.GetFileNameWithoutExtension(Ejecutable)))
+        {
+            using (proceso)
+            {
+                try
+                {
+                    if (!string.Equals(proceso.MainModule?.FileName, agente, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!proceso.WaitForExit(15000))
+                    {
+                        Paso("El agente no terminó a tiempo: se cierra el proceso");
+                        proceso.Kill(entireProcessTree: true);
+                        proceso.WaitForExit(10000);
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    // Ya terminó.
+                }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    // Sin acceso a ese proceso: no es el nuestro.
+                }
+            }
         }
     }
 
@@ -366,12 +394,22 @@ internal static class Instalacion
             var relativo = Path.GetRelativePath(origen, archivo);
             var objetivo = Path.Combine(destino, relativo);
             Directory.CreateDirectory(Path.GetDirectoryName(objetivo)!);
-            // Windows permite renombrar un ejecutable en uso (no sobrescribirlo): así el actualizador se reemplaza a sí mismo.
+            if (string.Equals(Path.GetFullPath(archivo), Path.GetFullPath(objetivo), StringComparison.OrdinalIgnoreCase)) continue;
+            // Windows permite renombrar un ejecutable o librería en uso (no sobrescribirlo): así el actualizador se
+            // reemplaza a sí mismo y un archivo que aún esté bloqueado no detiene la actualización.
             if (File.Exists(objetivo) && string.Equals(Path.GetFullPath(objetivo), Environment.ProcessPath, StringComparison.OrdinalIgnoreCase))
             {
                 File.Move(objetivo, objetivo + ".old", overwrite: true);
             }
-            File.Copy(archivo, objetivo, overwrite: true);
+            try
+            {
+                File.Copy(archivo, objetivo, overwrite: true);
+            }
+            catch (IOException) when (File.Exists(objetivo))
+            {
+                File.Move(objetivo, objetivo + ".old", overwrite: true);
+                File.Copy(archivo, objetivo, overwrite: true);
+            }
         }
     }
 

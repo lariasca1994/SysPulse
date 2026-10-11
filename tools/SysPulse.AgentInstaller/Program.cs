@@ -92,4 +92,13 @@ if (comando is "install" or "secretos")
     return yaInstalado ? Instalacion.Reinstalar(origen, secretos) : Instalacion.Instalar(origen, secretos);
 }
 
-return comando == "update" ? Instalacion.Actualizar(origen) : Instalacion.Desinstalar(args.Contains("--purgar"));
+try
+{
+    return comando == "update" ? Instalacion.Actualizar(origen) : Instalacion.Desinstalar(args.Contains("--purgar"));
+}
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+{
+    Console.Error.WriteLine($"No se pudo completar: {ex.Message}");
+    Console.Error.WriteLine("El agente anterior sigue funcionando. Cierra programas que usen la carpeta del agente (o reinicia) y vuelve a intentarlo.");
+    return 1;
+}
