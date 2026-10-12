@@ -29,8 +29,9 @@ un incidente con prioridad y SLA, avisa por Telegram y correo al nivel de soport
 - Necesitas un navegador, **una app autenticadora** (Google o Microsoft Authenticator, Authy) y
   una cuenta de **Telegram**.
 - La API se duerme sin uso: la primera visita puede tardar hasta un minuto (la web lo avisa).
-- Las capturas de este manual muestran las pantallas públicas. Las internas (salud de equipos,
-  incidentes, salas, analítica) exigen una cuenta verificada con MFA y se describen en texto.
+- Las capturas internas se tomaron con una cuenta de prueba de nivel **N2**; el correo y el
+  Telegram aparecen ocultos. La pantalla de **Administración** solo la ve el rol admin y se
+  describe en texto.
 
 ## 3. Paso a paso
 
@@ -80,17 +81,95 @@ administrador.
 Al abrir el enlace, además de la contraseña nueva se pide el **código de tu app autenticadora**:
 quien solo tenga acceso a tu correo no puede cambiarla.
 
-### 3.4 Pantallas internas
+### 3.4 Mi turno
 
-| Sección | Qué muestra o permite |
+![Mi turno: asignados y disponibles para tomar](img/manual/04-mi-turno.png)
+
+Lo asignado a ti y lo que puedes tomar en tu nivel, ordenado por lo que vence primero. Cada fila
+muestra prioridad, código, equipo, nivel, estado y la barra del SLA (en rojo si ya venció). El
+gestor ve además los incidentes con SLA en riesgo, vencidos o P1.
+
+### 3.5 Salud de hosts
+
+![Salud de hosts](img/manual/05-hosts.png)
+
+Arriba, cuántos equipos están en línea, saludables, con alertas y en excepción. Cada tarjeta
+muestra el estado del agente (**En línea**, **Sin reporte**), la salud (**Saludable**,
+**Advertencia**, **Excepción**), la alerta activa y sus indicadores con las marcas de umbral.
+Se actualiza cada 30 segundos.
+
+![Detalle de un equipo](img/manual/06-host-detalle.png)
+
+Al abrir un equipo ves sus alertas según el valor actual, las gráficas del historial (6 h, 24 h o
+7 días, con las líneas de umbral) y **Todas las lecturas** agrupadas en memoria, almacenamiento,
+red, batería y sistema.
+
+### 3.6 Incidentes
+
+![Lista de incidentes](img/manual/07-incidentes.png)
+
+La lista resume los abiertos y los SLA en riesgo o vencidos. **Registrar incidente** abre el
+formulario:
+
+![Formulario para registrar un incidente](img/manual/08-registrar-incidente.png)
+
+| # | Campo | Qué escribir |
+|:-:|---|---|
+| 1 | Título | Resumen de la falla (mínimo 5 caracteres, máximo 140) |
+| 2 | Descripción | Opcional: qué pasa y desde cuándo (máximo 4.000 caracteres) |
+| 3 | Equipo afectado | Uno de los equipos monitoreados, o **Ninguno en particular** |
+| 4 | Impacto | **Alto** (muchos afectados), **Medio** (un equipo o grupo) o **Bajo** (una persona) |
+| 5 | Urgencia | Qué tan rápido hay que actuar; por ejemplo **Alta** (detenido ahora) o **Media** (degradado) |
+| 6 | Registrar | Crea el incidente; la **prioridad resultante** (P1 a P5) se calcula sola con impacto × urgencia y se avisa al nivel N1 |
+
+![Detalle de un incidente](img/manual/09-incidente-detalle.png)
+
+En el detalle, según tu rol, aparecen **Sala**, **Tomar**, **Iniciar trabajo**, **En espera**
+(pausa el SLA), **Escalar**, **Asignar**, **Prioridad**, **Resolver** (con código de cierre) y
+**Cerrar**. El **Historial** registra cada cambio, incluidos los avisos automáticos del SLA, y el
+cuadro de nota agrega comentarios para el equipo. A la derecha, las barras de **Respuesta** y
+**Resolución** muestran el plazo consumido.
+
+### 3.7 Salas
+
+![Salas en tiempo real](img/manual/10-salas.png)
+
+`#operaciones` reúne los avisos generales (incidentes nuevos, escalamientos, resoluciones, cuentas
+nuevas) y cada incidente tiene su sala. Escribe en el cuadro inferior (Enter envía, Shift + Enter
+hace un salto de línea). Puedes retirar un mensaje propio durante 15 minutos; al cerrarse el
+incidente, su sala queda de solo lectura. Abajo a la izquierda ves quién está en línea.
+
+### 3.8 Analítica
+
+![Analítica ITIL](img/manual/11-analitica.png)
+
+Elige el período (7, 30 o 90 días):
+
+| Bloque | Qué mide |
 |---|---|
-| **Mi turno** | Lo asignado a ti y lo que puedes tomar en tu nivel, ordenado por vencimiento. El gestor ve los incidentes con SLA en riesgo, vencidos o P1 |
-| **Salud de hosts** | Cada equipo con su estado (en línea, retrasado, sin reporte), su salud y sus indicadores; al abrirlo, alertas y gráficas de 6 h, 24 h o 7 días |
-| **Incidentes** | Lista y detalle. **Registrar incidente** pide impacto y urgencia (la prioridad sale de ambos). Según tu rol: Tomar, Iniciar trabajo, En espera (pausa el SLA), Escalar, Asignar, Prioridad, Resolver (con código de cierre) y Cerrar |
-| **Salas** | `#operaciones` y una sala por incidente en tiempo real; puedes retirar un mensaje propio durante 15 minutos; al cerrar el incidente la sala queda de solo lectura |
-| **Analítica** | Cumplimiento de SLA, MTTA, MTTR, escalamientos, candidatos a problema, disponibilidad y cambios en 7, 30 o 90 días |
-| **Mi cuenta** | Cambiar contraseña, configurar la app autenticadora en otro teléfono y solicitar el rol gestor |
-| **Administración** (admin) | Agregar, renombrar o retirar equipos; activar o desactivar cuentas; aprobar el rol gestor; ajustar umbrales y persistencia |
+| Niveles de servicio | Cumplimiento del SLA de respuesta y de resolución, MTTA (tiempo hasta que alguien toma el incidente) y MTTR (tiempo hasta resolverlo) |
+| Gestión de incidentes | Incidentes del período, tasa de escalamiento, resueltos en primer nivel y reaperturas; gráfica por día y tabla por prioridad |
+| Gestión de problemas | Candidatos a problema: la misma alerta del mismo equipo 3 veces o más en 7 días |
+| Disponibilidad y capacidad | Porcentaje de ventanas de 5 minutos con datos y uso promedio y máximo de CPU y RAM por equipo |
+| Habilitación de cambios | Versiones de los agentes publicadas, registradas como cambios estándar |
+
+### 3.9 Mi cuenta
+
+![Mi cuenta](img/manual/12-perfil.png)
+
+Muestra tu correo, tu Telegram (verificado), el estado de la verificación en dos pasos y tu nivel.
+Desde aquí:
+
+- **Cambiar contraseña:** contraseña actual, nueva (mínimo 12 caracteres) y confirmación. Al
+  guardarla se cierran tus sesiones en otros dispositivos y recibes un aviso por Telegram.
+- **App autenticadora → Configurar en otro teléfono:** la app actual sigue funcionando hasta que
+  confirmes la nueva.
+- **Rol de gestor → Solicitar rol gestor:** la solicitud la aprueba el administrador.
+
+### 3.10 Administración (solo admin)
+
+Agregar, renombrar o retirar equipos; activar o desactivar cuentas; aprobar, rechazar o revocar el
+rol gestor; y ajustar umbrales y persistencia de las alertas.
 
 SLA por prioridad:
 
@@ -102,7 +181,7 @@ SLA por prioridad:
 | P4 | 8 h | 72 h |
 | P5 | 24 h | 5 días |
 
-### 3.5 Agregar un equipo
+### 3.11 Agregar un equipo
 
 1. El admin entra a **Administración → Equipos → Agregar equipo** y obtiene un **código de un solo
    uso** que vence en 24 horas.
