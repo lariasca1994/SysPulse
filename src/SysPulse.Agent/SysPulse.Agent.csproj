@@ -5,8 +5,8 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <AssemblyName>SysPulse.Agent</AssemblyName>
-    <!-- 1.4.0: alta con código de un solo uso; instalador sin funciones de administración ni secretos. -->
-    <Version>1.5.2</Version>
+    <!-- 1.6.0: consumo de red detallado por tipo de conexión (Wi-Fi, UTP, datos móviles). -->
+    <Version>1.6.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 

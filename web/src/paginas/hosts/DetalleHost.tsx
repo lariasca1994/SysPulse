@@ -22,8 +22,8 @@ function metricasGrafico(h: Host): string[] {
   const l = h.lecturas;
   const discos = Object.keys(l).filter((c) => /^disco_[A-Za-z]_pct$/.test(c)).sort();
   const lista = h.tipo === "android"
-    ? ["bateria_pct", "bateria_temp_c", "ram_pct", "almacenamiento_pct", "red_ping_8_8_8_8_rtt_ms"]
-    : ["cpu_total", "ram_pct", ...discos, "paginacion_pct", "red_entrada_mbs", "bateria_pct"];
+    ? ["bateria_pct", "bateria_temp_c", "ram_pct", "almacenamiento_pct", "red_ping_8_8_8_8_rtt_ms", "red_movil_bajada_mbs", "red_wifi_bajada_mbs"]
+    : ["cpu_total", "ram_pct", ...discos, "paginacion_pct", "red_entrada_mbs", "red_utp_bajada_mbs", "red_wifi_bajada_mbs", "red_movil_bajada_mbs", "bateria_pct"];
   return lista.filter((c) => l[c] !== undefined);
 }
 
