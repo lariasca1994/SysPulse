@@ -1,6 +1,7 @@
 // Cliente HTTP de la API de SysPulse. Normaliza errores (ProblemDetails de ASP.NET) a un formato único.
 
 import { API_BASE as BASE } from "./base";
+import { activarMantenimiento, ESTADOS_MANTENIMIENTO } from "./mantenimiento";
 
 export interface ErrorApi {
   estado: number;
@@ -46,8 +47,12 @@ async function solicitar<T>(metodo: string, ruta: string, cuerpo: unknown, token
       body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined,
     });
   } catch {
+    activarMantenimiento();
     throw new FallaApi({ estado: 0, mensaje: MENSAJE_RED, campos: {} });
   }
+
+  // API caída (502/504 de la plataforma) o base de datos sin conexión (503 de la API).
+  if (ESTADOS_MANTENIMIENTO.includes(respuesta.status)) activarMantenimiento();
 
   const texto = await respuesta.text();
   // 204 (sin contenido) llega vacío: se devuelve null.

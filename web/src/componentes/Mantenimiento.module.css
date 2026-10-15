@@ -1,0 +1,121 @@
+/* Pantalla de mantenimiento: solo tokens del sistema de diseño, así sigue el tema claro/oscuro. */
+
+.fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-6);
+  background: radial-gradient(900px 480px at 85% -10%, var(--primary-soft), transparent 60%), var(--bg);
+  overflow-y: auto;
+}
+
+.tarjeta {
+  width: 100%;
+  max-width: 540px;
+  padding: var(--sp-8) var(--sp-8);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card), 0 18px 40px -22px rgba(11, 58, 126, 0.35);
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-6);
+  color: var(--text);
+  font-weight: 600;
+  font-size: var(--fs-16);
+}
+
+/* El "pulso" de la marca, latiendo despacio mientras el servicio vuelve. */
+.pulso {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--pulse);
+}
+
+.pulso::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--pulse);
+  animation: latido 1.8s ease-out infinite;
+}
+
+@keyframes latido {
+  from { opacity: 0.8; transform: scale(1); }
+  to { opacity: 0; transform: scale(2.6); }
+}
+
+.etiqueta {
+  margin-bottom: var(--sp-1);
+  color: var(--link);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.titulo {
+  margin-bottom: var(--sp-3);
+  color: var(--text);
+  font-size: var(--fs-24);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.texto {
+  margin-bottom: var(--sp-3);
+  color: var(--text-muted);
+  font-size: var(--fs-16);
+}
+
+.lista {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-4) 0 var(--sp-6);
+  padding: 0;
+  list-style: none;
+  color: var(--text);
+  font-size: var(--fs-14);
+}
+
+.lista li {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: baseline;
+}
+
+.lista li::before {
+  content: "";
+  flex: 0 0 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+:global([data-theme="dark"]) .lista li::before {
+  background: var(--accent);
+}
+
+.boton {
+  padding: var(--sp-2) var(--sp-6);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--primary-text);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.boton:hover {
+  background: var(--primary-hover);
+}
