@@ -314,6 +314,14 @@ teléfono y, si eres N1, N2 o N3, solicita el rol de gestor.
 En **Administración** el admin agrega, renombra o retira equipos; desactiva o reactiva cuentas;
 aprueba, rechaza o revoca el rol gestor; y ajusta la persistencia y los umbrales de alerta.
 
+### Si el servicio no responde
+
+Si la API o la base de datos (MongoDB Atlas) no responden, la aplicación muestra una **pantalla de mantenimiento** con los colores del proyecto, en lugar de un error genérico o de una página que no carga.
+
+- **Servidor:** La API arranca aunque MongoDB no responda (`InicioApi` reintenta índices y admin semilla cada 30 s). Los errores de conexión a MongoDB responden **503** con `Retry-After` y CORS (`BaseNoDisponible`).
+- **Pantalla:** `web/src/api/cliente.ts` activa el mantenimiento sin conexión o con 502/503/504, y `componentes/Mantenimiento.tsx` muestra la pantalla con los tokens del sistema de diseño.
+- **Recuperación:** Consulta `/health` cada 15 s y recarga la página sola cuando el servicio vuelve. No reintenta acciones del usuario, para no duplicarlas.
+
 ---
 
 ## 6. Instalación para pruebas
