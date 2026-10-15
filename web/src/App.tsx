@@ -4,6 +4,7 @@ import { ProveedorSesion } from "./sesion";
 import { useSesion } from "./sesionContexto";
 import Login from "./paginas/acceso/Login";
 import { LayoutApp } from "./componentes/LayoutApp";
+import { Mantenimiento } from "./componentes/Mantenimiento";
 
 // Las pantallas que no se ven al entrar se cargan bajo demanda (la PWA abre más rápido).
 const Registro = lazy(() => import("./paginas/acceso/Registro"));
@@ -37,6 +38,7 @@ function SoloInvitado({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <ProveedorSesion>
+      <Mantenimiento />
       <BrowserRouter>
         <Suspense fallback={null}>
           <Routes>

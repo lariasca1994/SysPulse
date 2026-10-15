@@ -129,6 +129,8 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
 {
     if (!string.IsNullOrWhiteSpace(corsOrigin)) p.WithOrigins(corsOrigin).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
 }));
+// MongoDB caído → 503 de mantenimiento (ver BaseNoDisponible); el resto, ProblemDetails.
+builder.Services.AddExceptionHandler<SysPulse.Api.BaseNoDisponible>();
 builder.Services.AddProblemDetails();
 builder.Services.AddSignalR(o => o.MaximumReceiveMessageSize = 16 * 1024);
 
