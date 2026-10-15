@@ -260,3 +260,5 @@ seguidos; los picos breves se ignoran a propósito.
 
 **¿Cómo llego a ser gestor?** Desde tu nombre, arriba a la derecha → solicitar el rol de gestor.
 El admin lo aprueba o rechaza.
+
+**¿Qué significa la pantalla "Estamos en mantenimiento"?** El servicio o su base de datos no están respondiendo en ese momento. No se perdió nada: tus equipos, incidentes y mensajes siguen guardados, y ninguna acción quedó a medias (si no viste la confirmación, no se guardó). La pantalla se actualiza sola y vuelve a la normalidad apenas el servicio responda; también puedes reintentar más tarde.
