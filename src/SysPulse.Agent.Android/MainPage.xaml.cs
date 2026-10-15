@@ -25,6 +25,9 @@ public partial class MainPage : ContentPage
 
 		VincularPanel.IsVisible = !await ConfiguracionAndroid.EstaConfiguradoAsync();
 
+		// Actualización obligatoria pendiente de confirmación: se muestra apenas se abre la app.
+		ActualizadorAndroid.MostrarConfirmacionSiHay(Platform.CurrentActivity ?? AndroidApp.Context);
+
 		_refresco = Dispatcher.CreateTimer();
 		_refresco.Interval = TimeSpan.FromSeconds(2);
 		_refresco.Tick += (_, _) => Refrescar();

@@ -172,7 +172,7 @@ los equipos agregados:
 | Identificador anónimo del equipo (`win-` / `and-` + huella de 10 caracteres) | Nombre del equipo, usuario de Windows o cuenta del celular |
 | Tipo de equipo (Windows o Android) y versión del agente | Marca, modelo, número de serie o IMEI |
 | Uso de CPU, memoria, paginación y disco (promedio, mínimo, máximo y percentil 95 por ventana) | Archivos, documentos, fotos, contactos o mensajes |
-| Red: tráfico, errores, latencia y pérdida hacia DNS públicos, intensidad de señal y cantidad de puertos en escucha | Direcciones IP, ubicación, nombre de la red Wi-Fi o aplicaciones instaladas |
+| Red: tráfico y consumo por tipo de conexión (Wi-Fi, cable UTP y datos móviles), errores, latencia y pérdida hacia DNS públicos, intensidad de señal y cantidad de puertos en escucha | Direcciones IP, ubicación, nombre de la red Wi-Fi o aplicaciones instaladas |
 | Almacenamiento libre y, en celulares, batería (nivel, carga, salud, temperatura y voltaje) | Contenido del almacenamiento o datos de las aplicaciones |
 | Eventos de alerta cuando una métrica supera un umbral | Historial de navegación o pulsaciones de teclado |
 
@@ -192,8 +192,11 @@ asigna el sistema.
   Antes de cada publicación, `tools/escanear-secretos.ps1` revisa que los paquetes no contengan
   secretos, datos personales ni rutas del equipo de compilación. La app Android se publica sin modo
   de depuración.
-- **Actualizaciones:** solo desde GitHub Releases por HTTPS; la huella SHA-256 esperada viaja por la
-  configuración central y un archivo alterado se descarta.
+- **Actualizaciones obligatorias:** solo desde GitHub Releases por HTTPS; la huella SHA-256 esperada
+  viaja por la configuración central y un archivo alterado se descarta. En Windows las instala el servicio
+  "SysPulse Actualizador" cada hora, sin tareas programadas. En Android la app se instala a sí misma con el
+  instalador del sistema: la primera vez pide confirmación (notificación fija hasta instalar) y desde ahí
+  se actualiza sola.
 - Lee [SECURITY.md](SECURITY.md) antes de publicar.
 - Pruebas: 156 pruebas xUnit del dominio, el núcleo del agente y la infraestructura, y pruebas de punta
   a punta con Playwright sobre una base de pruebas aparte.
