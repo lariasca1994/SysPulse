@@ -361,6 +361,61 @@ a.tarjeta:hover {
   background: var(--critical);
 }
 
+.consumoRed {
+  display: grid;
+  gap: 6px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.consumoTitulo {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-12, 12px);
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.consumoRed ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.consumoRed li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px var(--sp-2);
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+}
+
+.consumoRed li[data-activa] {
+  color: var(--text);
+}
+
+.consumoNombre {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.consumoActiva {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--link) 14%, transparent);
+  color: var(--link);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .sinDatos {
   color: var(--text-subtle);
   font-size: var(--fs-13);

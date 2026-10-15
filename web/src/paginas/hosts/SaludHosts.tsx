@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { AlertTriangle, CheckCircle2, ChevronRight, Clock, RefreshCw, ServerCrash, Wifi } from "lucide-react";
+import { AlertTriangle, Cable, CheckCircle2, ChevronRight, Clock, RefreshCw, ServerCrash, Signal, Wifi } from "lucide-react";
 import { hosts, type Host } from "../../api/hosts";
 import { useConsulta } from "../../api/useConsulta";
 import { Alerta } from "../../componentes/ui/Basicos";
@@ -106,12 +106,56 @@ function TarjetaHost({ host, ahora }: { host: Host; ahora: number }) {
         {claves.length === 0 && <p className={s.sinDatos}>El agente aún no ha enviado lecturas.</p>}
       </div>
 
+      <ConsumoRed host={host} />
+
       <div className={s.pie}>
         <span>{l.sistema_uptime_h !== undefined ? `Encendido ${duracion(l.sistema_uptime_h)}` : "—"}</span>
         {red && <span className="num">{red}</span>}
         <ChevronRight size={16} aria-hidden="true" className={s.flecha} />
       </div>
     </Link>
+  );
+}
+
+/** Conexiones que reportan los agentes: código de red_tipo (Android) y prefijo de sus métricas. */
+const CONEXIONES = [
+  { prefijo: "red_wifi", nombre: "Wi-Fi", tipo: 1, icono: <Wifi size={14} aria-hidden="true" /> },
+  { prefijo: "red_movil", nombre: "Datos móviles", tipo: 2, icono: <Signal size={14} aria-hidden="true" /> },
+  { prefijo: "red_utp", nombre: "Cable UTP", tipo: 3, icono: <Cable size={14} aria-hidden="true" /> },
+] as const;
+
+/**
+ * Consumo de red por tipo de conexión (bajada y subida acumuladas). Solo muestra las conexiones que el equipo
+ * ha usado; marca la activa (la que informa el celular o, en Windows, la que tiene tráfico en este momento).
+ */
+function ConsumoRed({ host }: { host: Host }) {
+  const l = host.lecturas;
+  const filas = CONEXIONES
+    .map((c) => ({
+      ...c,
+      bajada: l[`${c.prefijo}_bajada_mb`] ?? 0,
+      subida: l[`${c.prefijo}_subida_mb`] ?? 0,
+      tasa: (l[`${c.prefijo}_bajada_mbs`] ?? 0) + (l[`${c.prefijo}_subida_mbs`] ?? 0),
+    }))
+    .filter((c) => c.bajada + c.subida >= 0.05 || c.tasa > 0);
+  if (filas.length === 0) return null;
+
+  const porTasa = [...filas].sort((a, b) => b.tasa - a.tasa)[0];
+  const activa = l.red_tipo !== undefined ? filas.find((c) => c.tipo === Math.round(l.red_tipo))?.prefijo : porTasa.tasa > 0 ? porTasa.prefijo : undefined;
+  const mb = describir("red_wifi_bajada_mb").formato;
+
+  return (
+    <div className={s.consumoRed}>
+      <p className={s.consumoTitulo}>Consumo de red</p>
+      <ul>
+        {filas.map((c) => (
+          <li key={c.prefijo} data-activa={c.prefijo === activa || undefined}>
+            <span className={s.consumoNombre}>{c.icono}{c.nombre}{c.prefijo === activa && <span className={s.consumoActiva}>activa</span>}</span>
+            <span className="num">↓ {mb(c.bajada)}  ↑ {mb(c.subida)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
