@@ -33,6 +33,29 @@ public sealed class AlmacenSecretosWindowsTests : IDisposable
     }
 
     [Fact]
+    public void CargarEnEntorno_BorraLasClavesRetiradas_YNoLasCarga()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        AlmacenSecretosWindows.Guardar(_ruta, new Dictionary<string, string>
+        {
+            ["AGENT_API_KEY"] = "clave", ["TELEGRAM_BOT_TOKEN"] = "123:token-viejo", ["TELEGRAM_FIXED_CHAT_IDS"] = "111",
+        });
+        var anterior = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
+        try
+        {
+            Environment.SetEnvironmentVariable("TELEGRAM_BOT_TOKEN", null);
+            Assert.True(AlmacenSecretosWindows.CargarEnEntorno(_ruta));
+
+            Assert.Null(Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN"));
+            Assert.Equal(["AGENT_API_KEY"], AlmacenSecretosWindows.Leer(_ruta)!.Keys);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("TELEGRAM_BOT_TOKEN", anterior);
+        }
+    }
+
+    [Fact]
     public void Leer_SinArchivo_DevuelveNull()
     {
         if (!OperatingSystem.IsWindows()) return;

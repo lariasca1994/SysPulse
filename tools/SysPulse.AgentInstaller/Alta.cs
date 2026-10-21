@@ -37,9 +37,12 @@ internal static class Alta
         {
             if (!respuesta.IsSuccessStatusCode)
             {
-                Console.Error.WriteLine((int)respuesta.StatusCode == 429
-                    ? "Error: demasiados intentos. Espera un minuto."
-                    : "Error: el código no es válido, ya se usó o venció. Genera uno nuevo en Administración → Equipos.");
+                Console.Error.WriteLine((int)respuesta.StatusCode switch
+                {
+                    429 => "Error: demasiados intentos. Espera un minuto.",
+                    503 => "Error: el alta de equipos no está disponible en este momento. Avisa al administrador.",
+                    _ => "Error: el código no es válido, ya se usó o venció. Genera uno nuevo en Salud de hosts → Agregar equipo.",
+                });
                 return null;
             }
             var r = await respuesta.Content.ReadFromJsonAsync<RespuestaAlta>();
@@ -49,9 +52,7 @@ internal static class Alta
                 ["MONGO_URI"] = r.MongoUri,
                 ["API_URL"] = r.ApiUrl,
                 ["AGENT_API_KEY"] = r.AgentApiKey,
-                ["TELEGRAM_FIXED_CHAT_IDS"] = string.Join(',', r.TelegramChatIds),
             };
-            if (!string.IsNullOrWhiteSpace(r.TelegramBotToken)) secretos["TELEGRAM_BOT_TOKEN"] = r.TelegramBotToken;
             Console.WriteLine("   código aceptado (los datos recibidos no se muestran)");
             return secretos;
         }

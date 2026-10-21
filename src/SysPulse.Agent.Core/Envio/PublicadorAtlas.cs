@@ -121,7 +121,10 @@ public sealed class PublicadorAtlas
         return doc is null ? null : DesdeBson(doc);
     }
 
-    /// <summary>Crea o reemplaza la configuración central (la usa el instalador; luego la editará el admin desde la web).</summary>
+    /// <summary>
+    /// Crea o reemplaza la configuración central (la usan las herramientas de administración). Al reemplazar el
+    /// documento completo, también borra campos de versiones anteriores que ya no deben llegar a los equipos.
+    /// </summary>
     public async Task GuardarConfiguracionAsync(Configuracion.ConfiguracionCentral config, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(config);
@@ -134,8 +137,6 @@ public sealed class PublicadorAtlas
         var doc = new BsonDocument
         {
             { "_id", Configuracion.ConfiguracionCentral.Documento },
-            { "telegram_chat_ids", new BsonArray(config.TelegramChatIds) },
-            { "telegram_bot_token", config.TelegramBotToken is null ? BsonNull.Value : config.TelegramBotToken },
             { "api_url", config.ApiUrl is null ? BsonNull.Value : config.ApiUrl },
             { "agent_api_key", config.AgentApiKey is null ? BsonNull.Value : config.AgentApiKey },
             { "umbrales", umbrales },
@@ -155,9 +156,6 @@ public sealed class PublicadorAtlas
         static double Numero(BsonDocument doc, string campo) => doc.TryGetValue(campo, out var v) && v.IsNumeric ? v.ToDouble() : 0;
         static int Entero(BsonDocument doc, string campo, int defecto) => doc.TryGetValue(campo, out var v) && v.IsNumeric ? v.ToInt32() : defecto;
 
-        var chats = d.TryGetValue("telegram_chat_ids", out var c) && c.IsBsonArray
-            ? c.AsBsonArray.Select(x => x.ToString()!).Where(x => x.Length > 0).ToList()
-            : [];
         var umbrales = d.TryGetValue("umbrales", out var u) && u.IsBsonArray
             ? u.AsBsonArray.Where(x => x.IsBsonDocument).Select(x => x.AsBsonDocument)
                 .Where(x => Texto(x, "metrica") is not null)
@@ -169,8 +167,6 @@ public sealed class PublicadorAtlas
         var actualizado = d.TryGetValue("actualizado", out var a) && a.IsValidDateTime ? new DateTimeOffset(a.ToUniversalTime()) : DateTimeOffset.MinValue;
         return new Configuracion.ConfiguracionCentral
         {
-            TelegramChatIds = chats,
-            TelegramBotToken = Texto(d, "telegram_bot_token"),
             ApiUrl = Texto(d, "api_url"),
             AgentApiKey = Texto(d, "agent_api_key"),
             Umbrales = umbrales,

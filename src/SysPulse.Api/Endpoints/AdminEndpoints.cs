@@ -57,7 +57,7 @@ public static class AdminEndpoints
 public sealed record NuevoNombreEquipo(string? Nombre);
 public sealed record RetiroEquipo(bool Retirar);
 
-/// <summary>Equipos: alta con código (admin), canje del código (instalador/app, sin sesión) y gestión de nombres y retiros.</summary>
+/// <summary>Equipos: alta con código (N2, N3 y admin), canje del código (instalador/app, sin sesión) y gestión de nombres y retiros (admin).</summary>
 public static class EquiposEndpoints
 {
     public static void MapEquipos(this IEndpointRouteBuilder app)
@@ -93,17 +93,22 @@ public static class EquiposEndpoints
 
         g.MapGet("/altas", (ServicioAltas s, CancellationToken ct) => s.CodigosAsync(ct));
 
-        g.MapPost("/altas", async (ClaimsPrincipal u, ServicioAltas s, CancellationToken ct) =>
+        // Agregar equipos al monitoreo: técnicos N2 y N3 y el admin (política "N2+").
+        app.MapPost("/api/equipos/altas", async (ClaimsPrincipal u, ServicioAltas s, CancellationToken ct) =>
         {
-            var (codigo, expira) = await s.CrearAsync(ObjectId.Parse(u.FindFirstValue(JwtRegisteredClaimNames.Sub)!), u.FindFirstValue(JwtRegisteredClaimNames.Name) ?? "Admin", ct);
+            var (codigo, expira) = await s.CrearAsync(ObjectId.Parse(u.FindFirstValue(JwtRegisteredClaimNames.Sub)!), u.FindFirstValue(JwtRegisteredClaimNames.Name) ?? "Técnico", ct);
             return Results.Ok(new { codigo, expira });
-        });
+        }).RequireAuthorization("N2+");
 
         // Canje del código (sin sesión): limitado por IP como el inicio de sesión, para impedir probar códigos al azar.
-        app.MapPost("/api/agentes/alta", async (SysPulse.Contracts.SolicitudAlta sol, HttpContext http, ServicioAltas s, CancellationToken ct) =>
-            await s.CanjearAsync(sol, http.Connection.RemoteIpAddress?.ToString(), ct) is { } r
+        // Sin credencial exclusiva de agentes no se entrega nada (ni se gasta el código).
+        app.MapPost("/api/agentes/alta", async (SysPulse.Contracts.SolicitudAlta sol, HttpContext http, ServicioAltas s, OpcionesAlta opciones, CancellationToken ct) =>
+        {
+            if (!opciones.Disponible(sol.TipoHost?.ToLowerInvariant() ?? ""))
+                return Results.Problem("El alta de equipos no está disponible en este momento. Avisa al administrador.", statusCode: 503);
+            return await s.CanjearAsync(sol, http.Connection.RemoteIpAddress?.ToString(), ct) is { } r
                 ? Results.Ok(r)
-                : Results.Problem("El código no es válido, ya se usó o venció.", statusCode: 400))
-            .RequireRateLimiting("auth");
+                : Results.Problem("El código no es válido, ya se usó o venció.", statusCode: 400);
+        }).RequireRateLimiting("auth");
     }
 }

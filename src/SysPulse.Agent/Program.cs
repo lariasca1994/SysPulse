@@ -25,12 +25,6 @@ var archivoEnv = secretosCifrados ? null : DotEnv.CargarSiExiste(AppContext.Base
 opciones.MongoUri ??= Environment.GetEnvironmentVariable("MONGO_URI");
 opciones.ApiUrl ??= Environment.GetEnvironmentVariable("API_URL");
 opciones.AgentApiKey ??= Environment.GetEnvironmentVariable("AGENT_API_KEY");
-opciones.TelegramBotToken ??= Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
-if (opciones.TelegramChatIdsRespaldo.Count == 0)
-{
-    opciones.TelegramChatIdsRespaldo = (Environment.GetEnvironmentVariable("TELEGRAM_FIXED_CHAT_IDS") ?? "")
-        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-}
 
 // Registro: archivo UTF-8 con rotación (7 archivos × 10 MB) en %ProgramData%\SysPulse\logs, más consola.
 builder.Services.AddSerilog(config => config
@@ -49,8 +43,6 @@ builder.Services.AddSerilog(config => config
 
 builder.Services.AddSingleton(opciones);
 builder.Services.AddSingleton(_ => new BufferLocal(Path.Combine(opciones.CarpetaDatos, "agente.db")));
-builder.Services.AddHttpClient<NotificadorRespaldo>()
-    .AddTypedClient((http, _) => new NotificadorRespaldo(http, opciones.RespaldoTelegramActivo ? opciones.TelegramBotToken : null, opciones.TelegramChatIdsRespaldo));
 
 builder.Services.AddSingleton<ICollector, CpuCollector>();
 builder.Services.AddSingleton<ICollector, MemoriaCollector>();

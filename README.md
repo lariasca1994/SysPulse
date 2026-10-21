@@ -136,8 +136,9 @@ SysPulse/
   cuando hay una excepción real.
 - El agente de Windows vigila el SLA de los incidentes abiertos leyendo Atlas y solo despierta a la
   API cuando un incidente cruza el 75 % o el 100 % de su plazo.
-- Si la API no responde a tiempo, el agente envía un aviso de respaldo por Telegram y reintenta el
-  evento después.
+- Si la API no responde a tiempo, el agente guarda el evento y lo reintenta hasta que la API lo
+  recibe: solo la API envía avisos, así que los equipos nunca guardan el token del bot de Telegram ni
+  las cuentas de las personas.
 
 ### Avisos por Telegram y correo
 
@@ -289,8 +290,8 @@ teléfono y, si eres N1, N2 o N3, solicita el rol de gestor.
 
 ### 5.9 Agregar equipos
 
-1. El admin entra a **Administración → Equipos → Agregar equipo** y obtiene un código (sirve una vez,
-   vence en 24 horas).
+1. Un técnico **N2 o N3** pulsa **Agregar equipo** en **Salud de hosts** (también está en
+   **Administración → Equipos**) y obtiene un código (sirve una vez, vence en 24 horas).
 2. **Windows (computador, portátil o tablet):** descarga
    [`SysPulse.Agent-win-x64.zip`](https://github.com/lariasca1994/syspulse-agentes/releases/latest/download/SysPulse.Agent-win-x64.zip),
    descomprímelo y, en PowerShell como administrador dentro de esa carpeta:
@@ -307,7 +308,7 @@ teléfono y, si eres N1, N2 o N3, solicita el rol de gestor.
 
 | Rol | Qué hace |
 |---|---|
-| N1, N2, N3 | Toman, trabajan, escalan y resuelven incidentes de su nivel |
+| N1, N2, N3 | Toman, trabajan, escalan y resuelven incidentes de su nivel; N2 y N3 además agregan equipos al monitoreo |
 | Gestor | Decide sobre riesgo y prioridad (incluido P1), reasigna y recibe los escalamientos por SLA |
 | Admin | Administra equipos, cuentas, solicitudes de gestor y alertas; puede hacer todo lo anterior |
 

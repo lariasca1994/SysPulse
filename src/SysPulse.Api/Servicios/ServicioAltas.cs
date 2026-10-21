@@ -8,8 +8,15 @@ using SysPulse.Infrastructure.Seguridad;
 
 namespace SysPulse.Api.Servicios;
 
-/// <summary>Datos que recibe un equipo al darse de alta. Pueden ser credenciales de base exclusivas para agentes.</summary>
-public sealed record OpcionesAlta(string? MongoWindows, string? MongoAndroid, string ApiPublica, string? AgentApiKey, string? TelegramBotToken, IReadOnlyList<string> TelegramChatIds);
+/// <summary>
+/// Datos que recibe un equipo al darse de alta: credenciales del usuario de base exclusivo de los agentes (con permisos
+/// solo sobre sus colecciones), la URL pública de la API y la clave que solo permite registrar eventos.
+/// </summary>
+public sealed record OpcionesAlta(string? MongoWindows, string? MongoAndroid, string ApiPublica, string? AgentApiKey)
+{
+    public bool Disponible(string tipo) =>
+        !string.IsNullOrWhiteSpace(AgentApiKey) && !string.IsNullOrWhiteSpace(tipo == "android" ? MongoAndroid : MongoWindows);
+}
 
 public sealed record CodigoAltaVista(string Pista, string CreadoPor, DateTime Creado, DateTime Expira, string Estado, string? TipoUsado, DateTime? UsadoEn);
 
@@ -26,6 +33,7 @@ public sealed class ServicioAltas(ContextoMongo mongo, OpcionesAlta opciones, Au
 
     private DateTime Ahora => reloj.GetUtcNow().UtcDateTime;
 
+    /// <summary>Lo genera un técnico N2 o N3 o el admin (política "N2+").</summary>
     public async Task<(string Codigo, DateTime Expira)> CrearAsync(ObjectId adminId, string adminNombre, CancellationToken ct)
     {
         var crudo = string.Concat(Enumerable.Range(0, 8).Select(_ => Alfabeto[RandomNumberGenerator.GetInt32(Alfabeto.Length)]));
@@ -78,6 +86,6 @@ public sealed class ServicioAltas(ContextoMongo mongo, OpcionesAlta opciones, Au
             [("Tipo", plataforma), ("Código usado", $"····-{alta.Pista}"), ("Generado por", alta.CreadoPorNombre)],
             $"{opcionesCuentas.UrlWeb}/admin", "Ver los equipos"), admins: true));
         await chat.SistemaAsync(ServicioChat.Operaciones, $"🆕 Se vinculó un equipo nuevo ({plataforma}). Aparecerá en Salud de hosts con su primer reporte.", ct).ConfigureAwait(false);
-        return new RespuestaAlta(mongoUri, opciones.ApiPublica, opciones.AgentApiKey, opciones.TelegramBotToken, opciones.TelegramChatIds);
+        return new RespuestaAlta(mongoUri, opciones.ApiPublica, opciones.AgentApiKey);
     }
 }

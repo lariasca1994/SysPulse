@@ -14,9 +14,6 @@ public sealed class OpcionesAgente
     public string? AgentApiKey { get; set; }
     /// <summary>Vigilar el SLA de los incidentes abiertos en Atlas y avisar a la API los cruces del 75 % y 100 % (solo Windows).</summary>
     public bool VigilarSla { get; set; }
-    public string? TelegramBotToken { get; set; }
-    public IReadOnlyList<string> TelegramChatIdsRespaldo { get; set; } = [];
-    public bool RespaldoTelegramActivo { get; set; } = true;
 
     public string CarpetaDatos { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "SysPulse");
 
@@ -25,7 +22,7 @@ public sealed class OpcionesAgente
     public TimeSpan IntervaloEnvioLotes { get; set; } = TimeSpan.FromMinutes(30);
     public TimeSpan RetencionCrudo { get; set; } = TimeSpan.FromHours(48);
 
-    /// <summary>Cada cuánto se relee la configuración central en Atlas (cuentas de Telegram, umbrales).</summary>
+    /// <summary>Cada cuánto se relee la configuración central en Atlas (umbrales, URL de la API, actualizaciones).</summary>
     public TimeSpan IntervaloConfiguracion { get; set; } = TimeSpan.FromMinutes(5);
 
     /// <summary>Una alerta solo se abre, escala o cierra si la condición se mantiene este tiempo (evita la "lluvia" de avisos). Se puede cambiar desde la configuración central.</summary>

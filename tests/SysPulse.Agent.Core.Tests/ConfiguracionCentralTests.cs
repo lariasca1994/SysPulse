@@ -59,15 +59,38 @@ public class ConfiguracionCentralTests
         var ruta = Path.Combine(Path.GetTempPath(), $"config-{Guid.NewGuid():N}.json");
         try
         {
-            var config = new ConfiguracionCentral { TelegramChatIds = ["1", "2", "3", "4"], Actualizado = T0, Umbrales = [new UmbralCentral("cpu.total", 1, 2, 0.5)] };
+            var config = new ConfiguracionCentral { ApiUrl = "https://api.ejemplo", Actualizado = T0, Umbrales = [new UmbralCentral("cpu.total", 1, 2, 0.5)] };
             config.GuardarCopia(ruta);
 
             var leida = ConfiguracionCentral.LeerCopia(ruta);
 
             Assert.NotNull(leida);
-            Assert.Equal(4, leida.TelegramChatIds.Count);
+            Assert.Equal("https://api.ejemplo", leida.ApiUrl);
             Assert.Equal(T0, leida.Actualizado);
             Assert.Single(leida.Umbrales);
+        }
+        finally
+        {
+            File.Delete(ruta);
+        }
+    }
+
+    [Fact]
+    public void DocumentoAntiguo_ConTokenDeTelegram_NoLlegaALaCopiaDelEquipo()
+    {
+        var doc = new MongoDB.Bson.BsonDocument
+        {
+            { "_id", ConfiguracionCentral.Documento }, { "telegram_bot_token", "123:secreto" },
+            { "telegram_chat_ids", new MongoDB.Bson.BsonArray { "111", "222" } }, { "api_url", "https://api.ejemplo" },
+        };
+        var ruta = Path.Combine(Path.GetTempPath(), $"config-{Guid.NewGuid():N}.json");
+        try
+        {
+            SysPulse.Agent.Core.Envio.PublicadorAtlas.DesdeBson(doc).GuardarCopia(ruta);
+            var contenido = File.ReadAllText(ruta);
+            Assert.DoesNotContain("secreto", contenido, StringComparison.Ordinal);
+            Assert.DoesNotContain("111", contenido, StringComparison.Ordinal);
+            Assert.Contains("https://api.ejemplo", contenido, StringComparison.Ordinal);
         }
         finally
         {

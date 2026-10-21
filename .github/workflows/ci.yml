@@ -65,6 +65,32 @@ jobs:
       - run: npm run lint
       - run: npm run build
 
+  render:
+    name: Credenciales de agentes en Render
+    # Render despliega cuando el CI pasa: este job deja antes, desde los secretos del repositorio, la
+    # credencial de base exclusiva de los agentes (la única que reciben los equipos al darse de alta).
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      SERVICIO: srv-db4rrdo473hc738tle8g
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      MONGO_URI_AGENTES: ${{ secrets.MONGO_URI_AGENTES }}
+      MONGO_URI_AGENTES_ANDROID: ${{ secrets.MONGO_URI_AGENTES_ANDROID }}
+    steps:
+      - name: Actualizar variables en Render
+        run: |
+          set -euo pipefail
+          if [ -z "$RENDER_API_KEY" ] || [ -z "$MONGO_URI_AGENTES" ] || [ -z "$MONGO_URI_AGENTES_ANDROID" ]; then
+            echo "::notice::Faltan secretos de agentes en el repositorio: el alta de equipos responde 503 hasta configurarlos."
+            exit 0
+          fi
+          for nombre in MONGO_URI_AGENTES MONGO_URI_AGENTES_ANDROID; do
+            jq -n --arg v "${!nombre}" '{value: $v}' | curl -sSf -o /dev/null -X PUT \
+              "https://api.render.com/v1/services/${SERVICIO}/env-vars/${nombre}" \
+              -H "Authorization: Bearer ${RENDER_API_KEY}" -H "Content-Type: application/json" \
+              --data-binary @- || { echo "::error::Render no aceptó la variable ${nombre}"; exit 1; }
+          done
+
   docker:
     name: Imagen Docker de la API
     runs-on: ubuntu-latest

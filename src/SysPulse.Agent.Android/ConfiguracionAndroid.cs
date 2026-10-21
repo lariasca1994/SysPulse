@@ -10,7 +10,10 @@ namespace SysPulse.Agent.Android;
 public static class ConfiguracionAndroid
 {
     public static readonly string[] ArchivosImportables = ["configuracion.txt", "prueba.txt"];
-    public static readonly string[] Claves = ["MONGO_URI_ANDROID", "API_URL", "AGENT_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_FIXED_CHAT_IDS"];
+    public static readonly string[] Claves = ["MONGO_URI_ANDROID", "API_URL", "AGENT_API_KEY"];
+
+    /// <summary>Claves que guardaban versiones anteriores y ya no deben quedar en el teléfono.</summary>
+    private static readonly string[] ClavesRetiradas = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_FIXED_CHAT_IDS"];
 
     private const string PreferenciaMonitoreoActivo = "monitoreo_activo";
 
@@ -61,7 +64,7 @@ public static class ConfiguracionAndroid
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(3) };
 
     /// <summary>
-    /// Vincula el celular con un código de alta de un solo uso (lo genera el admin en Administración → Equipos).
+    /// Vincula el celular con un código de alta de un solo uso (lo genera un técnico N2 o N3 o el admin en la web).
     /// Lo recibido se guarda cifrado en SecureStorage (Android Keystore). Devuelve null si salió bien o el error.
     /// </summary>
     public static async Task<string?> VincularAsync(string codigo)
@@ -84,7 +87,8 @@ public static class ConfiguracionAndroid
         using (respuesta)
         {
             if ((int)respuesta.StatusCode == 429) return "Demasiados intentos. Espera un minuto.";
-            if (!respuesta.IsSuccessStatusCode) return "El código no es válido, ya se usó o venció. Pide uno nuevo al administrador.";
+            if ((int)respuesta.StatusCode == 503) return "El alta de equipos no está disponible en este momento. Avisa al administrador.";
+            if (!respuesta.IsSuccessStatusCode) return "El código no es válido, ya se usó o venció. Pide uno nuevo a un técnico N2 o N3.";
             var r = await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<SysPulse.Contracts.RespuestaAlta>(respuesta.Content);
             if (r is null) return "Respuesta inesperada de SysPulse.";
             if (CadenaMongo.Validar(r.MongoUri, esAndroid: true) is { } error) return $"Configuración rechazada: {error}";
@@ -92,15 +96,13 @@ public static class ConfiguracionAndroid
             await SecureStorage.Default.SetAsync("MONGO_URI_ANDROID", r.MongoUri);
             await SecureStorage.Default.SetAsync("API_URL", r.ApiUrl);
             await SecureStorage.Default.SetAsync("AGENT_API_KEY", r.AgentApiKey);
-            await SecureStorage.Default.SetAsync("TELEGRAM_FIXED_CHAT_IDS", string.Join(',', r.TelegramChatIds));
-            if (!string.IsNullOrWhiteSpace(r.TelegramBotToken)) await SecureStorage.Default.SetAsync("TELEGRAM_BOT_TOKEN", r.TelegramBotToken);
             return null;
         }
     }
 
     public static async Task<OpcionesAgente> CargarOpcionesAsync()
     {
-        var chats = await SecureStorage.Default.GetAsync("TELEGRAM_FIXED_CHAT_IDS") ?? "";
+        foreach (var clave in ClavesRetiradas) SecureStorage.Default.Remove(clave);
         return new OpcionesAgente
         {
             HostId = IdHost(),
@@ -108,8 +110,6 @@ public static class ConfiguracionAndroid
             MongoUri = await SecureStorage.Default.GetAsync("MONGO_URI_ANDROID"),
             ApiUrl = await SecureStorage.Default.GetAsync("API_URL"),
             AgentApiKey = await SecureStorage.Default.GetAsync("AGENT_API_KEY"),
-            TelegramBotToken = await SecureStorage.Default.GetAsync("TELEGRAM_BOT_TOKEN"),
-            TelegramChatIdsRespaldo = chats.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             CarpetaDatos = FileSystem.AppDataDirectory,
             Umbrales = UmbralesPorDefecto.Android,
         };

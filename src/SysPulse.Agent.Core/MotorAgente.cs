@@ -25,7 +25,6 @@ public sealed partial class MotorAgente(
     IEnumerable<ICollector> collectors,
     OpcionesAgente opciones,
     BufferLocal buffer,
-    NotificadorRespaldo respaldo,
     ILogger<MotorAgente> logger)
 {
     private PublicadorAtlas? _atlas;
@@ -38,7 +37,6 @@ public sealed partial class MotorAgente(
     private IReadOnlyList<Umbral> _umbralesBase = [];
     private string? _apiUrl;
     private string? _apiKey;
-    private bool _conBateria;
     private DateTimeOffset _ultimaRevisionSla = DateTimeOffset.MinValue;
 
     public EstadoMotor Estado { get; private set; } = new(null, 0, null, null, "");
@@ -75,7 +73,7 @@ public sealed partial class MotorAgente(
             LogSinAtlas();
         }
 
-        LogInicio(opciones.HostId, opciones.TipoHost, version, opciones.IntervaloLectura, opciones.VentanaAgregado, opciones.IntervaloEnvioLotes, respaldo.Configurado);
+        LogInicio(opciones.HostId, opciones.TipoHost, version, opciones.IntervaloLectura, opciones.VentanaAgregado, opciones.IntervaloEnvioLotes);
 
         using var timer = new PeriodicTimer(opciones.IntervaloLectura);
         do
@@ -114,7 +112,6 @@ public sealed partial class MotorAgente(
             buffer.GuardarLecturas(lecturas);
         }
 
-        _conBateria |= lecturas.Any(l => l.Metrica == "bateria.pct");
         await ProcesarAlertasAsync(_evaluador.Evaluar(lecturas), ct).ConfigureAwait(false);
         await EntregarEventosAsync(ct).ConfigureAwait(false);
         if (opciones.VigilarSla && DateTimeOffset.UtcNow - _ultimaRevisionSla >= TimeSpan.FromMinutes(5)) await VigilarSlaAsync(ct).ConfigureAwait(false);
@@ -170,12 +167,9 @@ public sealed partial class MotorAgente(
         }).ConfigureAwait(false);
     }
 
-    /// <summary>Aplica en caliente: cuentas y token de Telegram, y umbrales (las alertas abiertas se conservan).</summary>
+    /// <summary>Aplica en caliente: URL y clave de la API, y umbrales (las alertas abiertas se conservan).</summary>
     private void AplicarConfiguracion(ConfiguracionCentral config, string origen)
     {
-        var token = opciones.RespaldoTelegramActivo ? config.TelegramBotToken ?? opciones.TelegramBotToken : null;
-        var chats = config.TelegramChatIds.Count > 0 ? config.TelegramChatIds : opciones.TelegramChatIdsRespaldo;
-        respaldo.Actualizar(token, chats);
         // La URL y la clave locales (si existen) tienen prioridad; si no, se usan las de la configuración central.
         _apiUrl = string.IsNullOrWhiteSpace(opciones.ApiUrl) ? config.ApiUrl : opciones.ApiUrl;
         _apiKey = string.IsNullOrWhiteSpace(opciones.AgentApiKey) ? config.AgentApiKey : opciones.AgentApiKey;
@@ -184,7 +178,7 @@ public sealed partial class MotorAgente(
         _evaluador.ActualizarUmbrales(umbrales);
         _evaluador.Persistencia = config.PersistenciaMinutos is > 0 and <= 120 ? TimeSpan.FromMinutes(config.PersistenciaMinutos.Value) : opciones.PersistenciaAlertas;
         _configAplicada = config.Actualizado;
-        LogConfiguracion(origen, chats.Count, config.Umbrales.Count, config.Actualizado);
+        LogConfiguracion(origen, config.Umbrales.Count, config.Actualizado);
         ConfiguracionAplicada?.Invoke(config);
     }
 
@@ -216,10 +210,10 @@ public sealed partial class MotorAgente(
     };
 
     /// <summary>
-    /// Entrega los eventos pendientes a la API (sección 3). Si la API no responde (90 s la primera vez, por el arranque
-    /// en frío de Render), las excepciones salen por el respaldo de Telegram a las cuentas fijas y el evento se reintenta
-    /// en los ciclos siguientes, marcado para que la API no repita el aviso a esas cuentas. Sin API configurada,
-    /// solo queda el respaldo. Un evento de más de 24 h ya no se entrega.
+    /// Entrega los eventos pendientes a la API (sección 3), que es la única que avisa por Telegram y correo: el equipo
+    /// no guarda el token del bot ni las cuentas de las personas. Si la API no responde (90 s la primera vez, por el
+    /// arranque en frío de Render), el evento queda en SQLite y se reintenta en los ciclos siguientes. Sin API
+    /// configurada no hay a quién entregarlo. Un evento de más de 24 h ya no se entrega.
     /// </summary>
     private async Task EntregarEventosAsync(CancellationToken ct)
     {
@@ -252,15 +246,6 @@ public sealed partial class MotorAgente(
             }
 
             buffer.SumarIntentoEvento(id);
-            if (!evento.RespaldoEnviado && NotificadorRespaldo.DebeAvisar(evento))
-            {
-                var enviados = 0;
-                await IntentarAsync("aviso de respaldo por Telegram", async () =>
-                    enviados = await respaldo.EnviarAsync(NotificadorRespaldo.Formatear(evento, NombreGenerico), ct).ConfigureAwait(false)).ConfigureAwait(false);
-                LogRespaldo(enviados);
-                if (enviados > 0) buffer.ActualizarEvento(id, JsonSerializer.Serialize(evento with { RespaldoEnviado = true }));
-            }
-
             if (!hayApi)
             {
                 buffer.MarcarEventoEntregado(id);
@@ -291,9 +276,6 @@ public sealed partial class MotorAgente(
         LogSla(pendientes, ok);
     }
 
-    /// <summary>Nombre genérico para el respaldo de Telegram: nunca el nombre del equipo ni su modelo.</summary>
-    private string NombreGenerico => opciones.TipoHost == "android" ? "Celular" : _conBateria ? "Equipo portátil" : "Equipo de escritorio";
-
     private async Task<bool> IntentarAsync(string accion, Func<Task> trabajo)
     {
         try
@@ -309,11 +291,11 @@ public sealed partial class MotorAgente(
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "SysPulse Agent {Host} ({Tipo}) v{Version}: lectura cada {Lectura}, ventana {Ventana}, lotes cada {Lotes}, respaldo Telegram {Respaldo}")]
-    private partial void LogInicio(string host, string tipo, string version, TimeSpan lectura, TimeSpan ventana, TimeSpan lotes, bool respaldo);
+    [LoggerMessage(Level = LogLevel.Information, Message = "SysPulse Agent {Host} ({Tipo}) v{Version}: lectura cada {Lectura}, ventana {Ventana}, lotes cada {Lotes}")]
+    private partial void LogInicio(string host, string tipo, string version, TimeSpan lectura, TimeSpan ventana, TimeSpan lotes);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Configuración central aplicada desde {Origen}: {Cuentas} cuenta(s) de Telegram, {Umbrales} umbral(es) personalizados (versión {Actualizado:yyyy-MM-dd HH:mm:ss})")]
-    private partial void LogConfiguracion(string origen, int cuentas, int umbrales, DateTimeOffset actualizado);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Configuración central aplicada desde {Origen}: {Umbrales} umbral(es) personalizados (versión {Actualizado:yyyy-MM-dd HH:mm:ss})")]
+    private partial void LogConfiguracion(string origen, int umbrales, DateTimeOffset actualizado);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "MONGO_URI no configurada: las métricas solo se guardan en SQLite")]
     private partial void LogSinAtlas();
@@ -329,9 +311,6 @@ public sealed partial class MotorAgente(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Alerta {Tipo} ({Severidad}): {Metrica} = {Valor:0.##}")]
     private partial void LogAlerta(TipoCambio tipo, Severidad severidad, string metrica, double valor);
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Aviso de respaldo enviado a {Enviados} cuenta(s) de Telegram")]
-    private partial void LogRespaldo(int enviados);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Evento entregado a la API: {Metrica} ({Tipo})")]
     private partial void LogEventoEntregado(string metrica, string tipo);

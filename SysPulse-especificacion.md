@@ -63,7 +63,7 @@ SysPulse es una plataforma de **operaciones de TI** que une en un solo lugar lo 
     │                 (si el equipo estuvo apagado, se ejecuta al arrancar la que quedó pendiente)
     ├─ cada 5 min  → lee incidentes abiertos en Atlas; solo si uno cruza 75 % o 100 % del SLA → POST /api/sla/umbral
     ├─ evento de excepción → POST /api/eventos → Render (lo despierta si duerme)
-    └─ si Render no responde en 90 s → aviso de respaldo directo a Telegram desde el equipo
+    └─ si Render no responde en 90 s → el evento queda en SQLite y se reintenta (el equipo no avisa por su cuenta)
 
   Además es el NODO DE ANALÍTICA: la analítica diaria con ML.NET corre aquí para todos los hosts
   (ML.NET no tiene soporte para Android).
@@ -74,7 +74,7 @@ SysPulse es una plataforma de **operaciones de TI** que une en un solo lugar lo 
     ├─ cada 60 s   → batería, temperatura, RAM, almacenamiento, red → SQLite
     ├─ cada 5 min  → chequeos TCP / ping / DNS desde la red del celular (Wi-Fi o datos móviles)
     ├─ cada 30 min → lote → MongoDB Atlas (DIRECTO)
-    └─ evento de excepción → POST /api/eventos → Render; respaldo directo a Telegram
+    └─ evento de excepción → POST /api/eventos → Render (se reintenta hasta 24 h)
 
   Host apagado o sin internet: el agente sigue guardando en SQLite (si está encendido) y envía todo
   al reconectar. En la plataforma, si estado_actual.ts de un host tiene más de 5 min, se muestra
@@ -105,7 +105,7 @@ SysPulse/
 │  │   ├─ Checks/                TcpCheck, PingCheck, DnsCheck
 │  │   ├─ Alertas/               Umbrales con histéresis, deduplicación, clasificación de eventos
 │  │   ├─ Buffer/                SQLite (store-and-forward)
-│  │   └─ Envio/                 Lotes a Atlas, eventos a la API, respaldo a Telegram
+│  │   └─ Envio/                 Lotes a Atlas y eventos a la API
 │  ├─ SysPulse.Agent/            Servicio de Windows (cada host Windows)
 │  │   ├─ Collectors/Windows/    CpuCollector, MemoriaCollector, PaginacionCollector, DiscoCollector,
 │  │   │                         RedCollector, ProcesosCollector, ServiciosCollector, EventLogCollector
@@ -512,7 +512,7 @@ Cuando un evento, incidente u otro registro supera los límites establecidos:
 - Los niveles son los del rol del usuario (`N1`, `N2`, `N3`). El `admin` recibe solo P1 (y lo que se le asigne directamente).
 - Cada usuario elige en su perfil qué canales tiene activos, pero **no puede desactivar todos** si tiene rol técnico o gestor (al menos uno queda activo).
 - **Telegram por usuario:** cada persona registra y **verifica** su Telegram al crear la cuenta (ver "Registro de cuentas → Verificación de Telegram"). Se guarda su `chat_id`. No se usa `getUpdates` (obligaría a consultar periódicamente); todo llega por webhook.
-- **Cuentas de Telegram fijas** (las que estén en la variable; hoy 4): configuradas por variable de entorno (`TELEGRAM_FIXED_CHAT_IDS`), no pasan por el registro ni la verificación y reciben **todos** los avisos (excepciones y advertencias) sin importar el nivel. El agente también las usa como destino de respaldo cuando Render no responde, porque el agente no conoce los destinatarios por nivel.
+- **Cuentas de Telegram fijas** (las que estén en la variable; hoy 4): configuradas por variable de entorno (`TELEGRAM_FIXED_CHAT_IDS`), no pasan por el registro ni la verificación y reciben **todos** los avisos (excepciones y advertencias) sin importar el nivel. Solo la API las conoce: los equipos no reciben chat IDs ni el token del bot.
 - **Correo:** un mensaje por destinatario (Brevo cuenta cada destinatario contra los 300/día). Con un equipo pequeño y el enfriamiento de 30 min el consumo queda muy por debajo del límite; si se acerca al 80 % diario, las advertencias de correo se agrupan en un resumen.
 
 | Canal | Implementación | Límite gratuito |
@@ -525,7 +525,7 @@ Reglas:
 - Se notifica al **abrir, escalar y cerrar**, nunca por cada lectura. P1 siempre notifica.
 - **Enfriamiento** por `clave_dedup` (30 min, configurable) registrado en la colección `notificaciones`.
 - Un fallo de un canal no bloquea los demás (Polly con reintentos cortos por canal).
-- **Respaldo:** si `POST /api/eventos` no responde en 90 s (arranque en frío o caída), el agente envía el aviso directo a Telegram desde el equipo.
+- **Reintento:** si `POST /api/eventos` no responde en 90 s (arranque en frío o caída), el agente guarda el evento en SQLite y lo reintenta en los ciclos siguientes (hasta 24 h). El equipo no avisa por su cuenta: así nunca guarda el token del bot.
 - Cada canal implementa `INotificador`; se habilita o deshabilita por configuración sin cambiar código.
 - **Destinatarios siempre dinámicos:** la API lee los usuarios (rol, nivel, `chat_id` verificado) en el momento de notificar; un usuario nuevo recibe avisos desde su verificación, sin tocar agentes.
 - **Configuración central de los agentes** (colección `configuracion`, documento `agentes` en Atlas): cuentas fijas y token de Telegram, URL de la API y clave del agente (`api_url`, `agent_api_key`), y umbrales personalizados (por métrica y, opcionalmente, por tipo de host). Al desplegar en Render basta con cambiar `API_URL` y volver a publicar: los agentes la toman solos. Cada agente la relee cada 5 min, la aplica en caliente (las alertas abiertas se conservan) y guarda una copia local (`config-central.json`) para arrancar sin internet. Localmente solo queda la cadena de conexión a Atlas. Hoy se publica con `SysPulse.AgentInstaller config-central`; luego la editará el admin desde la web.
@@ -853,10 +853,10 @@ La API de bots de Telegram **no permite que un bot escriba primero** a un @usuar
 
 ### Alta de equipos y seguridad de los instaladores
 
-- **Alta con código:** el admin genera en la web (Administración → Equipos) un código de un solo uso que vence en 24 h; solo se guarda su huella. El instalador de Windows (`install --codigo`) y la app Android (Vincular) lo canjean en `POST /api/agentes/alta` (limitado por IP) y reciben su configuración, que guardan cifrada (DPAPI / Android Keystore).
+- **Alta con código:** un técnico N2 o N3 o el admin genera en la web (Salud de hosts → Agregar equipo, o Administración → Equipos) un código de un solo uso que vence en 24 h; solo se guarda su huella. El instalador de Windows (`install --codigo`) y la app Android (Vincular) lo canjean en `POST /api/agentes/alta` (limitado por IP) y reciben su configuración, que guardan cifrada (DPAPI / Android Keystore).
 - **Instaladores públicos sin secretos ni funciones de administración:** las herramientas de administración (`config-central`, `publicar-version`, `mongo-estandar`) viven en `tools/SysPulse.Herramientas`, que no se publica. Los binarios se compilan sin rutas del equipo de compilación y el APK sin modo de depuración. `tools/escanear-secretos.ps1` es obligatorio antes de cada publicación.
 - **Nombres estables:** cada equipo recibe un nombre genérico con número fijo por tipo (colección `hosts_alias`); agregar equipos no renombra a los existentes. Retirar un equipo lo oculta sin borrar su historial.
-- **Usuario de base exclusivo para agentes (recomendado):** si se definen `MONGO_URI_AGENTES` y `MONGO_URI_AGENTES_ANDROID` en Render, las altas entregan esas credenciales en lugar de las de la API.
+- **Usuario de base exclusivo para agentes (obligatorio):** las altas entregan solo `MONGO_URI_AGENTES` y `MONGO_URI_AGENTES_ANDROID`; sin ellas, `POST /api/agentes/alta` responde 503 y no gasta el código. Nunca se entrega `MONGO_URI` (la de la API).
 
 ### Orden de despliegue
 
@@ -893,8 +893,8 @@ La API de bots de Telegram **no permite que un bot escriba primero** a un @usuar
 | Dónde | Variables |
 |---|---|
 | Render (API) | `MONGO_URI`, `JWT_SECRET`, `MFA_ENCRYPTION_KEY`, `AGENT_API_KEY`, `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_FIXED_CHAT_IDS` (2 cuentas fijas), `TELEGRAM_WEBHOOK_SECRET`, `CLOUDINARY_URL`, `CORS_ORIGIN`, `ADMIN_EMAIL`, `ADMIN_TEMP_PASSWORD` |
-| Equipo (agente, cifrado DPAPI) | `MONGO_URI` (usuario `syspulse-agent`), `API_URL`, `AGENT_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_FIXED_CHAT_IDS` (respaldo) |
-| Celular (agente, `SecureStorage`) | `MONGO_URI_ANDROID` (usuario `syspulse-agent`, formato `mongodb://`; se genera desde `MONGO_URI` con `SysPulse.AgentInstaller mongo-estandar`), `API_URL`, `AGENT_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_FIXED_CHAT_IDS` |
+| Equipo (agente, cifrado DPAPI) | `MONGO_URI` (usuario `syspulse-agent`), `API_URL`, `AGENT_API_KEY` |
+| Celular (agente, `SecureStorage`) | `MONGO_URI_ANDROID` (usuario `syspulse-agent`, formato `mongodb://`; se genera desde `MONGO_URI` con `SysPulse.AgentInstaller mongo-estandar`), `API_URL`, `AGENT_API_KEY` |
 | Vercel (web) | `VITE_API_URL` |
 | GitHub Secrets | `RENDER_DEPLOY_HOOK`, `API_URL`, `CI_API_KEY`, `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` |
 
@@ -909,7 +909,7 @@ La API de bots de Telegram **no permite que un bot escriba primero** a un @usuar
 - Agente de Windows completo (métricas, chequeos de red, alertas, SQLite, envío a Atlas)
 - Agente Android (sonda móvil) sobre el mismo núcleo `SysPulse.Agent.Core`; vista de todos los hosts en "Salud de hosts" (sin límite de cantidad)
 - API: eventos + plantillas + autenticación (roles `N1` / `N2` / `N3` / `gestor` / `admin` , registro propio con elección de N1/N2/N3, contraseña propia, MFA TOTP y admin semilla)
-- Notificaciones: Brevo API y Telegram con enfriamiento y respaldo desde el agente
+- Notificaciones: Brevo API y Telegram con enfriamiento, enviadas solo por la API
 - Chat SignalR: `#operaciones`, salas, vistos, presencia, comandos básicos
 - Incidentes propios: registro, escalamiento N1 → N2 → N3 y SLA por prioridad
 - Frontend React + PWA instalable: registro/MFA, Mi turno, Salud del host, Sala
