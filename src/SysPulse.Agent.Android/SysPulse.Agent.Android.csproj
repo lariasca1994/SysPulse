@@ -13,8 +13,8 @@
 
 		<ApplicationTitle>SysPulse Agent</ApplicationTitle>
 		<ApplicationId>dev.syspulse.agent</ApplicationId>
-		<ApplicationDisplayVersion>0.6.0</ApplicationDisplayVersion>
-		<ApplicationVersion>6</ApplicationVersion>
+		<ApplicationDisplayVersion>0.7.0</ApplicationDisplayVersion>
+		<ApplicationVersion>7</ApplicationVersion>
 
 		<!-- Android 10 (API 29): estado térmico del sistema. Teléfono de referencia: Android 16 (API 36). -->
 		<SupportedOSPlatformVersion>29.0</SupportedOSPlatformVersion>
