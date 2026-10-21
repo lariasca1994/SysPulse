@@ -69,7 +69,7 @@ jobs:
     name: Credenciales de agentes en Render
     # Render despliega cuando el CI pasa: este job deja antes, desde los secretos del repositorio, la
     # credencial de base exclusiva de los agentes (la única que reciben los equipos al darse de alta).
-    if: github.event_name == 'push'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     env:
       SERVICIO: srv-db4rrdo473hc738tle8g
