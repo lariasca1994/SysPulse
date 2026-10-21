@@ -15,9 +15,8 @@ public static class AlmacenSecretosWindows
 {
     public const string NombreArchivo = "agent.json";
 
-    /// <summary>Variables que el agente necesita (las mismas del .env).</summary>
-    public static readonly IReadOnlyList<string> Claves =
-        ["MONGO_URI", "API_URL", "AGENT_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_FIXED_CHAT_IDS"];
+    /// <summary>Variables que el agente necesita. Ninguna permite leer usuarios ni hablar en nombre del bot de Telegram.</summary>
+    public static readonly IReadOnlyList<string> Claves = ["MONGO_URI", "API_URL", "AGENT_API_KEY"];
 
     // Entropía adicional: otro programa de la máquina no puede descifrar el archivo sin conocerla.
     private static readonly byte[] Entropia = Encoding.UTF8.GetBytes("SysPulse.Agent.v1");
@@ -41,12 +40,27 @@ public static class AlmacenSecretosWindows
         return JsonSerializer.Deserialize<Dictionary<string, string>>(json);
     }
 
-    /// <summary>Carga los secretos como variables de entorno del proceso (sin sobrescribir las existentes).</summary>
+    /// <summary>
+    /// Carga los secretos como variables de entorno del proceso (sin sobrescribir las existentes). Solo las
+    /// <see cref="Claves"/>: lo que dejaron versiones anteriores (como el token de Telegram) se borra del archivo.
+    /// </summary>
     public static bool CargarEnEntorno(string ruta)
     {
         var secretos = Leer(ruta);
         if (secretos is null) return false;
-        foreach (var (clave, valor) in secretos)
+        var vigentes = secretos.Where(s => Claves.Contains(s.Key)).ToDictionary(s => s.Key, s => s.Value, StringComparer.Ordinal);
+        if (vigentes.Count < secretos.Count)
+        {
+            try
+            {
+                Guardar(ruta, vigentes);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CryptographicException)
+            {
+                // Sin permiso de escritura: el instalador lo limpia en la próxima actualización; igual no se carga.
+            }
+        }
+        foreach (var (clave, valor) in vigentes)
         {
             if (Environment.GetEnvironmentVariable(clave) is null) Environment.SetEnvironmentVariable(clave, valor);
         }

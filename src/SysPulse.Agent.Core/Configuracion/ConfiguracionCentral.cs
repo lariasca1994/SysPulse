@@ -22,17 +22,16 @@ public sealed record PaqueteActualizacion(string Version, string Url, string Sha
 
 /// <summary>
 /// Configuración compartida por todos los agentes, guardada en Atlas (colección "configuracion", documento "agentes").
-/// Los agentes la releen periódicamente y la aplican en caliente: agregar una cuenta de Telegram o cambiar un umbral
-/// no requiere reinstalar nada. Localmente solo queda lo necesario para llegar a Atlas (la cadena de conexión).
+/// Los agentes la releen periódicamente y la aplican en caliente: cambiar un umbral no requiere reinstalar nada.
+/// La leen todos los equipos, así que nunca lleva secretos de la plataforma (token de Telegram, cuentas de personas):
+/// los avisos los envía solo la API.
 /// </summary>
 public sealed record ConfiguracionCentral
 {
     public const string Coleccion = "configuracion";
     public const string Documento = "agentes";
 
-    public IReadOnlyList<string> TelegramChatIds { get; init; } = [];
-    public string? TelegramBotToken { get; init; }
-    /// <summary>URL de la API para los eventos (POST /api/eventos). Vacía: los agentes solo usan el respaldo de Telegram.</summary>
+    /// <summary>URL de la API para los eventos (POST /api/eventos). Vacía: los eventos no se entregan.</summary>
     public string? ApiUrl { get; init; }
     /// <summary>Clave con la que el agente se identifica ante la API (solo permite registrar eventos).</summary>
     public string? AgentApiKey { get; init; }

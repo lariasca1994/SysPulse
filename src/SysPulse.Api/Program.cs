@@ -51,14 +51,14 @@ builder.Services.AddScoped<ServicioIncidentes>();
 builder.Services.AddScoped<ServicioAnalitica>();
 builder.Services.AddScoped<ServicioAdmin>();
 builder.Services.AddScoped<ServicioAltas>();
-// Lo que recibe un equipo al darse de alta. MONGO_URI_AGENTES* permite usar un usuario de base exclusivo (y limitado) para los agentes.
+// Lo que recibe un equipo al darse de alta: solo la credencial del usuario de base exclusivo de los agentes
+// (MONGO_URI_AGENTES*, limitado a sus colecciones), la URL pública y la clave de eventos. Nunca la cadena de la API
+// ni el token de Telegram: sin MONGO_URI_AGENTES* el alta queda deshabilitada.
 builder.Services.AddSingleton(new OpcionesAlta(
-    config["MONGO_URI_AGENTES"] ?? config["MONGO_URI"],
-    config["MONGO_URI_AGENTES_ANDROID"] ?? config["MONGO_URI_ANDROID"],
+    config["MONGO_URI_AGENTES"],
+    config["MONGO_URI_AGENTES_ANDROID"],
     (config["API_PUBLICA"] ?? "https://syspulse-api-7dj0.onrender.com").TrimEnd('/'),
-    config["AGENT_API_KEY"],
-    config["TELEGRAM_BOT_TOKEN"],
-    [.. (config["TELEGRAM_FIXED_CHAT_IDS"] ?? "").Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries)]));
+    config["AGENT_API_KEY"]));
 builder.Services.AddSingleton(new SysPulse.Agent.Core.Envio.PublicadorAtlas(Requerida("MONGO_URI")));
 
 // Notificaciones (sección 7): cola en memoria + envío en segundo plano. Las cuentas fijas reciben todo.

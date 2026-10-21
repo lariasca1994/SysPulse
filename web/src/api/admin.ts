@@ -88,8 +88,12 @@ export const equipos = {
   renombrar: (t: string, id: string, nombre: string) => post<{ ok: boolean }>(`/api/admin/equipos/${encodeURIComponent(id)}/nombre`, { nombre }, t),
   retirar: (t: string, id: string, retirar: boolean) => post<{ ok: boolean }>(`/api/admin/equipos/${encodeURIComponent(id)}/retiro`, { retirar }, t),
   codigos: (t: string) => get<CodigoAlta[]>("/api/admin/altas", t),
-  nuevoCodigo: (t: string) => post<{ codigo: string; expira: string }>("/api/admin/altas", {}, t),
+  // N2, N3 y admin (política "N2+").
+  nuevoCodigo: (t: string) => post<{ codigo: string; expira: string }>("/api/equipos/altas", {}, t),
 };
+
+/** Roles que pueden agregar equipos al monitoreo (la API lo exige con la política "N2+"). */
+export const puedeAgregarEquipos = (rol?: string) => rol === "N2" || rol === "N3" || rol === "admin";
 
 /** Siempre la última versión publicada de los instaladores (repositorio público, solo binarios). */
 export const DESCARGAS = {

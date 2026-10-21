@@ -3,6 +3,9 @@ import { Link } from "react-router";
 import { AlertTriangle, Cable, CheckCircle2, ChevronRight, Clock, RefreshCw, ServerCrash, Signal, Wifi } from "lucide-react";
 import { hosts, type Host } from "../../api/hosts";
 import { useConsulta } from "../../api/useConsulta";
+import { useSesion } from "../../sesionContexto";
+import { puedeAgregarEquipos } from "../../api/admin";
+import { AltaEquipo } from "../admin/AltaEquipo";
 import { Alerta } from "../../componentes/ui/Basicos";
 import { describir, destacadas, duracion, hace, NOMBRE_CLASE, claseHost } from "./metricas";
 import { EtiquetaSalud, IconoHost, Medidor, PildoraConexion } from "./Piezas";
@@ -15,6 +18,7 @@ const REFRESCO_MS = 30_000;
 export default function SaludHosts() {
   const { datos, error, cargando, actualizado, recargar } = useConsulta((t) => hosts.listar(t), [], REFRESCO_MS);
   const ahora = useAhora();
+  const { usuario } = useSesion();
   const lista = datos ?? [];
 
   const enLinea = lista.filter((h) => h.conexion === "en-linea").length;
@@ -33,6 +37,7 @@ export default function SaludHosts() {
           <button type="button" className={s.botonIcono} onClick={() => void recargar()} disabled={cargando} aria-label="Actualizar ahora" title="Actualizar ahora">
             <RefreshCw size={16} aria-hidden="true" className={cargando ? s.girando : undefined} />
           </button>
+          {puedeAgregarEquipos(usuario?.rol) && <AltaEquipo />}
         </div>
       </div>
 
@@ -53,7 +58,7 @@ export default function SaludHosts() {
         <div className={s.vacio}>
           <ServerCrash size={28} aria-hidden="true" />
           <h2>Todavía no hay hosts</h2>
-          <p>Instala el agente en un equipo y aparecerá aquí en menos de un minuto.</p>
+          <p>{puedeAgregarEquipos(usuario?.rol) ? "Pulsa «Agregar equipo», instala el agente con el código y aparecerá aquí en menos de un minuto." : "Un técnico N2 o N3 puede agregar equipos; aparecerán aquí en menos de un minuto."}</p>
         </div>
       ) : (
         <section className={s.grid} aria-label="Hosts monitoreados">

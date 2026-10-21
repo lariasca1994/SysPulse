@@ -92,12 +92,9 @@ static async Task<int> ConfigCentralAsync(string? rutaEnv)
 
     var atlas = new SysPulse.Agent.Core.Envio.PublicadorAtlas(mongo);
     var actual = await atlas.LeerConfiguracionAsync(CancellationToken.None);
-    var chats = (Valor(lineas, "TELEGRAM_FIXED_CHAT_IDS") ?? "")
-        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    // Sin token de Telegram ni cuentas de personas: la configuración central la leen todos los equipos.
     var nueva = new ConfiguracionCentral
     {
-        TelegramChatIds = chats,
-        TelegramBotToken = Valor(lineas, "TELEGRAM_BOT_TOKEN"),
         ApiUrl = Valor(lineas, "API_URL") is { Length: > 0 } api ? api.TrimEnd('/') : null,
         AgentApiKey = Valor(lineas, "AGENT_API_KEY") is { Length: > 0 } clave ? clave : null,
         // Los umbrales personalizados (si ya existían) se conservan: los editará el admin desde la web.
@@ -107,7 +104,7 @@ static async Task<int> ConfigCentralAsync(string? rutaEnv)
         PersistenciaMinutos = actual?.PersistenciaMinutos,
     };
     await atlas.GuardarConfiguracionAsync(nueva, CancellationToken.None);
-    Console.WriteLine($"Configuración central publicada: {chats.Length} cuenta(s) de Telegram, token {(nueva.TelegramBotToken is null ? "sin cambios (no está en el .env)" : "incluido")}, API {(nueva.ApiUrl ?? "sin configurar (solo respaldo por Telegram)")}, clave de agente {(nueva.AgentApiKey is null ? "no" : "incluida")}, {nueva.Umbrales.Count} umbral(es) personalizados.");
+    Console.WriteLine($"Configuración central publicada: API {(nueva.ApiUrl ?? "sin configurar")}, clave de agente {(nueva.AgentApiKey is null ? "no" : "incluida")}, {nueva.Umbrales.Count} umbral(es) personalizados.");
     Console.WriteLine("Los agentes la aplicarán solos en menos de 5 minutos.");
     return 0;
 }

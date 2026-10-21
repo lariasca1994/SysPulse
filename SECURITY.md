@@ -10,6 +10,15 @@ configuran solo como variables de entorno en Render y en el `.env` local. Los eq
 al canjear un código de alta de un solo uso y los guardan cifrados (DPAPI en Windows, Android Keystore
 en el celular).
 
+Lo que recibe un equipo es solo lo mínimo para reportar:
+
+- `MONGO_URI_AGENTES` / `MONGO_URI_AGENTES_ANDROID`: usuario de base exclusivo de los agentes, con un rol
+  que solo inserta y actualiza sus colecciones de métricas y lee la configuración central y los tiempos
+  de los incidentes. Sin esas variables el alta responde 503: nunca se entrega la cadena de la API.
+- `AGENT_API_KEY`: solo permite registrar eventos y avisos de SLA.
+- Nunca el token del bot de Telegram ni las cuentas de las personas: los avisos los envía solo la API.
+  La configuración central que leen los equipos tampoco los lleva.
+
 ## Instaladores públicos
 
 El repositorio `syspulse-agentes` es público y solo contiene binarios. Antes de cada publicación:

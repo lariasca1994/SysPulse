@@ -23,7 +23,6 @@ public sealed partial class ServicioMonitoreo : Service
     private const string Canal = "syspulse_monitoreo";
     private const int IdNotificacion = 1001;
 
-    private static readonly HttpClient Http = new();
     private static readonly ILoggerFactory Logs = Logcat.CrearFactory();
 
     private CancellationTokenSource? _cancelacion;
@@ -98,8 +97,7 @@ public sealed partial class ServicioMonitoreo : Service
             var opciones = await ConfiguracionAndroid.CargarOpcionesAsync();
             _buffer = new BufferLocal(Path.Combine(opciones.CarpetaDatos, "agente.db"));
             ICollector[] colectores = [new BateriaCollector(), new SistemaCollector(), new RedMovilCollector()];
-            var respaldo = new NotificadorRespaldo(Http, opciones.TelegramBotToken, opciones.TelegramChatIdsRespaldo);
-            Motor = new MotorAgente(colectores, opciones, _buffer, respaldo, Logs.CreateLogger<MotorAgente>());
+                        Motor = new MotorAgente(colectores, opciones, _buffer, Logs.CreateLogger<MotorAgente>());
             // Versión nueva publicada en la configuración central: se descarga y se avisa con una notificación.
             Motor.ConfiguracionAplicada += config => ActualizadorAndroid.Revisar(this, config, log);
             await Motor.EjecutarAsync(AppInfo.Current.VersionString, [], ct);

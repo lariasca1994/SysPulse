@@ -244,8 +244,9 @@ SLA por prioridad:
 
 ### 4.11 Agregar un equipo
 
-1. El admin entra a **Administración → Equipos → Agregar equipo** y obtiene un **código de un solo
-   uso** que vence en 24 horas.
+1. Si eres **N2 o N3**, pulsa **Agregar equipo** en **Salud de hosts** (también está en
+   **Administración → Equipos**) y obtienes un **código de un solo uso** que vence en 24 horas. N1 y
+   gestor no ven el botón: pídele el código a un técnico N2 o N3.
 2. **Windows:** descarga el agente desde GitHub Releases y, en PowerShell como administrador,
    ejecuta `.\SysPulse.AgentInstaller.exe install --codigo XXXX-XXXX`.
 3. **Android:** instala el APK, abre **SysPulse Agent**, escribe el código y pulsa **Vincular**.
@@ -309,12 +310,16 @@ Comprobado en el código del proyecto (`src/SysPulse.Infrastructure/Cuentas`,
 - **Sesiones revocables:** el JWT dura 8 horas y deja de servir si cambian la contraseña, el MFA o
   el rol. En el navegador vive en `sessionStorage`, que se borra al cerrar la pestaña.
 - **Roles en el servidor:** N1, N2 y N3 se eligen al registrarse; el rol gestor solo lo aprueba el
-  admin; todas las rutas de administración exigen rol admin. Nadie borra datos: solo se desactiva
+  admin; todas las rutas de administración exigen rol admin; generar códigos de alta exige N2, N3 o
+  admin. Nadie borra datos: solo se desactiva
   o retira, y la auditoría es de solo inserción.
 - **Privacidad de los equipos:** nombres genéricos y solo métricas técnicas (ver la tabla
   anterior).
 - **Agentes sin secretos:** el equipo recibe su configuración al canjear un código de un solo uso
-  (solo se guarda su huella) y la guarda cifrada (DPAPI en Windows, Android Keystore). Antes de
+  (solo se guarda su huella) y la guarda cifrada (DPAPI en Windows, Android Keystore). Recibe solo
+  una credencial de base exclusiva de los agentes, limitada a sus colecciones de métricas, y la
+  clave que solo permite registrar eventos: nunca la cadena de la API ni el token de Telegram. Los
+  avisos los envía solo el servidor. Antes de
   publicar, `tools/escanear-secretos.ps1` revisa que los paquetes no lleven secretos.
 - **Actualizaciones verificadas:** los agentes solo se actualizan desde GitHub Releases por HTTPS y
   descartan cualquier archivo cuya huella SHA-256 no coincida.
