@@ -361,8 +361,9 @@ y configurar el MFA.
 
 ### Despliegue
 
-1. **API en Render:** servicio web con `deploy/Dockerfile.api`; las variables de entorno se
-   configuran en Render (nunca en el repositorio). Cada push a `main` la despliega.
+1. **API en Render:** servicio web con `deploy/Dockerfile.api`; las variables de entorno viven en
+   Render (nunca en el repositorio). Cada push a `main` la despliega cuando pasa el CI, que antes
+   copia desde los secretos de GitHub la credencial exclusiva de los agentes (`MONGO_URI_AGENTES*`).
 2. **Web en Vercel:** proyecto con raíz en `web/`; la URL de la API está en `web/.env.production`.
 3. **Telegram:** el webhook apunta a `https://<api>/api/telegram/webhook` con el secreto de
    `TELEGRAM_WEBHOOK_SECRET`.
