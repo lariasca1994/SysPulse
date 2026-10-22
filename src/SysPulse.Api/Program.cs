@@ -54,9 +54,12 @@ builder.Services.AddScoped<ServicioAltas>();
 // Lo que recibe un equipo al darse de alta: solo la credencial del usuario de base exclusivo de los agentes
 // (MONGO_URI_AGENTES*, limitado a sus colecciones), la URL pública y la clave de eventos. Nunca la cadena de la API
 // ni el token de Telegram: sin MONGO_URI_AGENTES* el alta queda deshabilitada.
+// Se quitan espacios y marcas invisibles (BOM) que algunas herramientas agregan al cargar el valor:
+// el equipo valida que la cadena empiece por mongodb:// y la rechazaría.
+static string? Limpia(string? valor) => valor?.Trim('﻿', ' ', '\r', '\n', '\t');
 builder.Services.AddSingleton(new OpcionesAlta(
-    config["MONGO_URI_AGENTES"],
-    config["MONGO_URI_AGENTES_ANDROID"],
+    Limpia(config["MONGO_URI_AGENTES"]),
+    Limpia(config["MONGO_URI_AGENTES_ANDROID"]),
     (config["API_PUBLICA"] ?? "https://syspulse-api-7dj0.onrender.com").TrimEnd('/'),
     config["AGENT_API_KEY"]));
 builder.Services.AddSingleton(new SysPulse.Agent.Core.Envio.PublicadorAtlas(Requerida("MONGO_URI")));
