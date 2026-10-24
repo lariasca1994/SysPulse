@@ -21,6 +21,12 @@ COPY src/SysPulse.Api/ src/SysPulse.Api/
 RUN dotnet publish src/SysPulse.Api/SysPulse.Api.csproj -c Release -o /app --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.13 AS runtime
+# Almacén de certificados del sistema sin las raíces que firmaron los intermedios
+# comprometidos de eMudhra (octubre 2026): emSign y Comodo "AAA Certificate Services".
+RUN if command -v update-ca-certificates > /dev/null; then \
+        rm -f /usr/share/ca-certificates/mozilla/emSign_* /usr/share/ca-certificates/mozilla/Comodo_AAA_Services_root.crt \
+        && update-ca-certificates --fresh > /dev/null 2>&1; \
+    fi
 WORKDIR /app
 COPY --from=build /app ./
 
