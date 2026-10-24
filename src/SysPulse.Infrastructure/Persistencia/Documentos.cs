@@ -46,6 +46,21 @@ public sealed class MfaDoc
     public List<string> CodigosRecuperacionHash { get; set; } = [];
     /// <summary>Último paso TOTP aceptado: impide reutilizar el mismo código.</summary>
     public long UltimoPaso { get; set; }
+
+    // Código por correo como método alternativo (o único) del segundo factor.
+    public bool CorreoActivo { get; set; }
+    /// <summary>Método que se pide por defecto al ingresar: "app" o "correo".</summary>
+    public string? Preferido { get; set; }
+    /// <summary>Huella del último código enviado por correo (el código nunca se guarda).</summary>
+    public string? CodigoCorreoHash { get; set; }
+    public DateTime? CodigoCorreoExpira { get; set; }
+    public int CodigoCorreoIntentos { get; set; }
+    /// <summary>Envíos recientes: máximo 3 cada 10 minutos.</summary>
+    public List<DateTime> EnviosCorreo { get; set; } = [];
+
+    /// <summary>Códigos errados seguidos (app o correo): 5 bloquean el segundo factor 15 minutos.</summary>
+    public int Fallos { get; set; }
+    public DateTime? BloqueoHasta { get; set; }
 }
 
 public enum TipoVerificacion { Correo, Telegram, Restablecer }

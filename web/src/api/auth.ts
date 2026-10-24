@@ -24,10 +24,17 @@ export interface ResultadoRegistro {
   enlaceCorreoDesarrollo: string | null;
 }
 
+/** Métodos activos del segundo factor y el que se pide por defecto. */
+export interface MetodosMfa {
+  app: boolean;
+  correo: boolean;
+  preferido: "app" | "correo" | null;
+}
+
 export type PasoLogin =
   | { paso: "cambiar-password"; token: string }
   | { paso: "configurar-mfa"; token: string }
-  | { paso: "mfa"; token: string };
+  | { paso: "mfa"; token: string; metodos: MetodosMfa };
 
 export const auth = {
   registro: (datos: { nombre: string; email: string; password: string; nivel: Nivel; telegram: string; pais: string }) =>
@@ -40,7 +47,17 @@ export const auth = {
   iniciarMfa: (token: string) => post<{ secreto: string; uri: string }>("/api/auth/mfa/iniciar", { token }),
   activarMfa: (token: string, codigo: string) =>
     post<{ codigosRecuperacion: string[]; sesion: Sesion }>("/api/auth/mfa/activar", { token, codigo }),
-  verificarMfa: (token: string, codigo: string) => post<{ sesion: Sesion }>("/api/auth/mfa/verificar", { token, codigo }),
+  verificarMfa: (token: string, codigo: string, metodo?: "app" | "correo") =>
+    post<{ sesion: Sesion }>("/api/auth/mfa/verificar", { token, codigo, metodo }),
+  enviarCodigoCorreo: (token: string) => post<{ mensaje: string }>("/api/auth/mfa/correo/enviar", { token }),
+  activarCorreo: (token: string, codigo: string) =>
+    post<{ codigosRecuperacion: string[]; sesion: Sesion }>("/api/auth/mfa/correo/activar", { token, codigo }),
+  metodosMfa: (sesion: string) => get<MetodosMfa>("/api/auth/mfa", sesion),
+  agregarAppIniciar: (sesion: string) => post<{ secreto: string; uri: string }>("/api/auth/mfa/agregar/app/iniciar", {}, sesion),
+  agregarAppActivar: (sesion: string, codigo: string) => post<MetodosMfa>("/api/auth/mfa/agregar/app/activar", { codigo }, sesion),
+  agregarCorreoEnviar: (sesion: string) => post<{ mensaje: string }>("/api/auth/mfa/agregar/correo/enviar", {}, sesion),
+  agregarCorreoActivar: (sesion: string, codigo: string) => post<MetodosMfa>("/api/auth/mfa/agregar/correo/activar", { codigo }, sesion),
+  preferirMfa: (sesion: string, metodo: "app" | "correo") => post<MetodosMfa>("/api/auth/mfa/preferido", { metodo }, sesion),
   yo: (token: string) => get<Perfil>("/api/auth/yo", token),
   cambiarPasswordConSesion: (token: string, actual: string, nueva: string) =>
     post<{ sesion: Sesion }>("/api/auth/password/cambiar", { actual, nueva }, token),

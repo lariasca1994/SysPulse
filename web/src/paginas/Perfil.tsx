@@ -6,7 +6,7 @@ import { useSesion } from "../sesionContexto";
 import { Alerta, Boton } from "../componentes/ui/Basicos";
 import { CampoPassword } from "../componentes/ui/Campos";
 import h from "./hosts/hosts.module.css";
-import { CambiarAutenticador } from "./CambiarAutenticador";
+import { MetodosVerificacion } from "./MetodosVerificacion";
 import { SolicitarGestor } from "./SolicitarGestor";
 import s from "./Perfil.module.css";
 
@@ -103,7 +103,7 @@ export default function Perfil() {
             </div>
           </form>
         </section>
-        <CambiarAutenticador />
+        <MetodosVerificacion />
         {["N1", "N2", "N3"].includes(usuario.rol) && <SolicitarGestor />}
       </div>
     </>

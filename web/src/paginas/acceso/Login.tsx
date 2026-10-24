@@ -23,7 +23,7 @@ export default function Login() {
     try {
       const r = await auth.login(email, password);
       const destino = r.paso === "cambiar-password" ? "/cambiar-password" : r.paso === "configurar-mfa" ? "/mfa/configurar" : "/mfa";
-      navegar(destino, { state: { token: r.token } });
+      navegar(destino, { state: { token: r.token, metodos: r.paso === "mfa" ? r.metodos : undefined } });
     } catch (err) {
       if (!esFalla(err)) throw err;
       const paso = err.detalle.datos?.paso;
