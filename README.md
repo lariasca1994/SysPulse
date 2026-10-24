@@ -184,7 +184,9 @@ asigna el sistema.
 ### Seguridad y estado
 
 - **Runtime con parches de seguridad:** la API fija .NET 10.0.13 (actualización de seguridad de
-  octubre de 2026), igual que los paquetes de ASP.NET Core y de las extensiones de .NET.
+  octubre de 2026), igual que los paquetes de ASP.NET Core y de las extensiones de .NET. La imagen
+  tampoco confía en las raíces emSign ni «AAA Certificate Services» que firmaron los intermedios comprometidos de eMudhra
+  (la misma mitigación que publicó Red Hat).
 - **Cuentas:** contraseña con PBKDF2, MFA obligatorio (app o correo; 5 códigos errados lo bloquean
   15 minutos), bloqueo por intentos, sesiones que se cierran
   al cambiar contraseña, rol o MFA, y auditoría de solo inserción.

@@ -339,7 +339,9 @@ Comprobado en el código del proyecto (`src/SysPulse.Infrastructure/Cuentas`,
   descartan cualquier archivo cuya huella SHA-256 no coincida.
 - **CORS restringido** a la web oficial y secretos solo en variables de entorno de Render.
 - **Runtime con parches de seguridad:** la API fija .NET 10.0.13 (actualización de seguridad de
-  octubre de 2026), igual que los paquetes de ASP.NET Core y de las extensiones de .NET.
+  octubre de 2026), igual que los paquetes de ASP.NET Core y de las extensiones de .NET. La imagen
+  tampoco confía en las raíces emSign ni «AAA Certificate Services» que firmaron los intermedios comprometidos de eMudhra
+  (la misma mitigación que publicó Red Hat).
 
 ## 6. Agradecimientos
 
