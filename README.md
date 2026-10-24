@@ -182,6 +182,8 @@ asigna el sistema.
 
 ### Seguridad y estado
 
+- **Al día en seguridad:** el runtime, el sistema y las dependencias se mantienen con los últimos
+  parches y se revisan periódicamente.
 - **Cuentas:** contraseña con PBKDF2, MFA obligatorio, bloqueo por intentos, sesiones que se cierran
   al cambiar contraseña, rol o MFA, y auditoría de solo inserción.
 - **Roles:** N1, N2 y N3 los elige cada persona al registrarse; el rol **gestor** se solicita y solo
@@ -331,7 +333,7 @@ Si la API o la base de datos (MongoDB Atlas) no responden, la aplicación muestr
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download) (y el workload `maui-android` para el agente
   Android).
-- Node.js 24.
+- Node.js 24.22.1 o superior.
 - Una base de MongoDB Atlas (M0 gratuito).
 
 ### Configuración

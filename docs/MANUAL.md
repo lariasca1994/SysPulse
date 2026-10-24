@@ -324,6 +324,8 @@ Comprobado en el código del proyecto (`src/SysPulse.Infrastructure/Cuentas`,
 - **Actualizaciones verificadas:** los agentes solo se actualizan desde GitHub Releases por HTTPS y
   descartan cualquier archivo cuya huella SHA-256 no coincida.
 - **CORS restringido** a la web oficial y secretos solo en variables de entorno de Render.
+- **Al día en seguridad:** el runtime, el sistema y las dependencias se mantienen con los últimos
+  parches y se revisan periódicamente.
 
 ## 6. Agradecimientos
 
