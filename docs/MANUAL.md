@@ -324,6 +324,8 @@ Comprobado en el código del proyecto (`src/SysPulse.Infrastructure/Cuentas`,
 - **Actualizaciones verificadas:** los agentes solo se actualizan desde GitHub Releases por HTTPS y
   descartan cualquier archivo cuya huella SHA-256 no coincida.
 - **CORS restringido** a la web oficial y secretos solo en variables de entorno de Render.
+- **Runtime con parches de seguridad:** la API fija .NET 10.0.13 (actualización de seguridad de
+  octubre de 2026), igual que los paquetes de ASP.NET Core y de las extensiones de .NET.
 
 ## 6. Agradecimientos
 
