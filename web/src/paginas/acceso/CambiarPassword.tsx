@@ -30,7 +30,7 @@ export default function CambiarPassword() {
     setCargando(true);
     try {
       const r = await auth.cambiarPassword(token!, nueva);
-      navegar(r.paso === "mfa" ? "/mfa" : "/mfa/configurar", { state: { token: r.token }, replace: true });
+      navegar(r.paso === "mfa" ? "/mfa" : "/mfa/configurar", { state: { token: r.token, metodos: r.paso === "mfa" ? r.metodos : undefined }, replace: true });
     } catch (err) {
       if (!esFalla(err)) throw err;
       if (err.detalle.campos.nueva) setErrorCampo(err.detalle.campos.nueva);

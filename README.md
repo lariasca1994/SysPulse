@@ -44,7 +44,7 @@ operaciones. Todo corre en capas gratuitas.
   equipo por incidente y los indicadores ITIL (cumplimiento de SLA, MTTA, MTTR, escalamientos,
   candidatos a problema, disponibilidad).
 - **Cómo probarlo:** entra a la [demo](https://syspulse.vercel.app), crea tu cuenta eligiendo tu
-  nivel (N1, N2 o N3), confirma tu correo y tu Telegram, y activa tu app autenticadora. Para
+  nivel (N1, N2 o N3), confirma tu correo y tu Telegram, y elige tu verificación en dos pasos. Para
   correrlo en tu equipo, ve a [Instalación para pruebas](#6-instalación-para-pruebas).
 
 ### Demo en vivo
@@ -70,7 +70,8 @@ operaciones. Todo corre en capas gratuitas.
 - **Analítica ITIL:** SLA, MTTA, MTTR, escalamiento, resolución en primer nivel, reaperturas,
   candidatos a problema, disponibilidad y capacidad de los equipos, y cambios del período.
 - **Cuentas seguras:** registro propio, verificación de correo y de Telegram, contraseña robusta,
-  MFA obligatorio (TOTP con códigos de recuperación), cambio y restablecimiento de contraseña.
+  MFA obligatorio (app autenticadora TOTP o código por correo, a elección, con códigos de
+  recuperación), cambio y restablecimiento de contraseña.
 - **Equipos sin fricción:** alta con un código de un solo uso, nombres genéricos (nunca el modelo ni
   el nombre del equipo) y actualización automática de los agentes con verificación de huella.
 - **PWA instalable** con tema claro y oscuro.
@@ -184,7 +185,8 @@ asigna el sistema.
 
 - **Al día en seguridad:** el runtime, el sistema y las dependencias se mantienen con los últimos
   parches y se revisan periódicamente.
-- **Cuentas:** contraseña con PBKDF2, MFA obligatorio, bloqueo por intentos, sesiones que se cierran
+- **Cuentas:** contraseña con PBKDF2, MFA obligatorio (app o correo; 5 códigos errados lo bloquean
+  15 minutos), bloqueo por intentos, sesiones que se cierran
   al cambiar contraseña, rol o MFA, y auditoría de solo inserción.
 - **Roles:** N1, N2 y N3 los elige cada persona al registrarse; el rol **gestor** se solicita y solo
   lo aprueba el **admin**. Nadie borra datos: el admin solo desactiva o retira.
@@ -241,9 +243,12 @@ asigna el sistema.
 ### 5.2 Iniciar sesión
 
 1. Escribe tu correo y tu contraseña y pulsa **Continuar**.
-2. La primera vez, escanea el QR con tu app autenticadora (Google o Microsoft Authenticator, Authy)
-   y **guarda los 10 códigos de recuperación**.
-3. Las siguientes veces, escribe el código de 6 dígitos de la app.
+2. La primera vez, elige tu verificación en dos pasos: **App autenticadora (recomendado)** (escanea
+   el QR con Google o Microsoft Authenticator, Authy) o **Código por correo** (te llega un código de 6
+   dígitos que vence en 10 minutos). Escribe el primer código, pulsa **Activar** y **guarda los 10
+   códigos de recuperación**.
+3. Las siguientes veces, escribe el código de 6 dígitos del método que elegiste y pulsa **Verificar**;
+   si tienes los dos, la pantalla ofrece usar el otro.
 4. Si olvidaste la contraseña, usa **¿Olvidaste tu contraseña?**: llega un enlace al correo y además se
    pide el código de la app autenticadora.
 
@@ -287,7 +292,8 @@ incidentes, candidatos a problema, disponibilidad de los equipos y cambios regis
 
 ### 5.8 Mi cuenta
 
-Desde tu nombre, arriba a la derecha: cambia tu contraseña, configura la app autenticadora en otro
+Desde tu nombre, arriba a la derecha: cambia tu contraseña, agrega el método de verificación que no
+elegiste (app o correo) y escoge cuál se pide por defecto, configura la app autenticadora en otro
 teléfono y, si eres N1, N2 o N3, solicita el rol de gestor.
 
 ### 5.9 Agregar equipos

@@ -27,8 +27,8 @@ un incidente con prioridad y SLA, avisa por Telegram y correo al nivel de soport
 
 ### Alcance: qué necesitas y qué esperar
 
-- Necesitas un navegador, **una app autenticadora** (Google o Microsoft Authenticator, Authy) y
-  una cuenta de **Telegram**.
+- Necesitas un navegador, **una app autenticadora** (Google o Microsoft Authenticator, Authy) o
+  acceso a tu **correo** para la verificación en dos pasos, y una cuenta de **Telegram**.
 - La API se duerme sin uso: la primera visita puede tardar hasta un minuto (la web lo avisa).
 - Las capturas internas se tomaron con una cuenta de prueba de nivel **N2**; el correo y el
   Telegram aparecen ocultos. La pantalla de **Administración** solo la ve el rol admin y se
@@ -36,8 +36,8 @@ un incidente con prioridad y SLA, avisa por Telegram y correo al nivel de soport
 
 ### Límites
 
-- Guarda los códigos de recuperación fuera del teléfono: sin la app y sin esos códigos no podrás
-  entrar.
+- Guarda los códigos de recuperación fuera del teléfono: sin tu segundo factor (app o correo) y sin
+  esos códigos no podrás entrar.
 - Los avisos de Telegram llegan a tu cuenta personal: no reenvíes capturas de incidentes fuera del
   equipo.
 - Instala el agente solo en equipos de los que seas responsable.
@@ -104,12 +104,20 @@ Qué servicio de nube, base de datos o API usa el proyecto y para qué sirve cad
 |:-:|---|---|
 | 1 | Correo | El correo de tu cuenta |
 | 2 | Contraseña | Tu contraseña |
-| 3 | Continuar | Valida la contraseña y pide el código de la app autenticadora |
+| 3 | Continuar | Valida la contraseña y pide el código de tu verificación en dos pasos |
 | 4 | ¿Olvidaste tu contraseña? | Recuperación (ver 3.3) |
 | 5 | Regístrate | Crea una cuenta nueva |
 
-La primera vez escaneas un QR con tu app autenticadora y **guardas los 10 códigos de
-recuperación**; las siguientes, escribes el código de 6 dígitos de la app.
+**Verificación en dos pasos (obligatoria).** La primera vez eliges cómo recibir el código:
+
+| Método | Cómo funciona |
+|---|---|
+| **App autenticadora** (recomendado) | Escaneas el QR con Google Authenticator, Microsoft Authenticator u otra app; la app muestra un código nuevo cada 30 segundos, incluso sin internet. Si no puedes escanear, escribe la clave que aparece bajo el QR. |
+| **Código por correo** | Cada vez que ingresas te llega un código de 6 dígitos que vence en 10 minutos y sirve una sola vez. Puedes pedir hasta 3 códigos cada 10 minutos (**Enviar un código nuevo**). |
+
+Escribe el primer código, pulsa **Activar** y **guarda los 10 códigos de recuperación**. En los
+siguientes ingresos escribe el código y pulsa **Verificar**; si tienes los dos métodos, la pantalla
+ofrece usar el otro, y siempre puedes usar un código de recuperación.
 
 ### 4.2 Crear una cuenta
 
@@ -223,6 +231,9 @@ Desde aquí:
 
 - **Cambiar contraseña:** contraseña actual, nueva (mínimo 12 caracteres) y confirmación. Al
   guardarla se cierran tus sesiones en otros dispositivos y recibes un aviso por Telegram.
+- **Verificación en dos pasos:** muestra tus métodos activos; **Agregar app autenticadora** o
+  **Agregar código por correo** suma el que falta (se confirma con su primer código), y **Pedir la
+  app / el correo por defecto** elige cuál se pide al ingresar.
 - **App autenticadora → Configurar en otro teléfono:** la app actual sigue funcionando hasta que
   confirmes la nueva.
 - **Rol de gestor → Solicitar rol gestor:** la solicitud la aprueba el administrador.
@@ -279,6 +290,7 @@ Tu confianza es lo primero: la plataforma solo pide los datos necesarios para fu
 | Usuario o número de Telegram | Enviarte los avisos de tu nivel | MongoDB Atlas | Se verifica con un código del bot |
 | Contraseña | Iniciar sesión | MongoDB Atlas, **solo su huella PBKDF2** | No se puede leer ni recuperar |
 | Secreto de la app autenticadora | Segundo factor | MongoDB Atlas, **cifrado con AES-GCM** | La clave de cifrado vive fuera de la base |
+| Código por correo | Segundo factor | MongoDB Atlas, **solo su huella** (10 minutos) | Nadie: no se puede leer |
 | Códigos de recuperación y enlaces | Recuperar el acceso | Solo su huella SHA-256 | Un solo uso, con límite de intentos |
 | Sesión | Mantenerte conectado | `sessionStorage` del navegador | Se borra al cerrar la pestaña; dura 8 horas |
 
@@ -300,8 +312,10 @@ Comprobado en el código del proyecto (`src/SysPulse.Infrastructure/Cuentas`,
 `src/SysPulse.Infrastructure/Seguridad`, `src/SysPulse.Api`, `web/src/sesion.tsx`):
 
 - **Contraseñas con PBKDF2** (`PasswordHasher` de ASP.NET Core) y mínimo de 12 caracteres.
-- **MFA obligatorio con TOTP** y 10 códigos de recuperación; el secreto del autenticador se guarda
-  cifrado con AES-GCM.
+- **MFA obligatorio** con app autenticadora (TOTP) o código por correo, y 10 códigos de
+  recuperación; el secreto del autenticador se guarda cifrado con AES-GCM y el código del correo
+  solo como huella (vence en 10 minutos y sirve una vez). Un código de la app no se acepta dos veces
+  y 5 códigos errados bloquean el segundo factor 15 minutos.
 - **Bloqueo por intentos:** 5 contraseñas erradas bloquean la cuenta 15 minutos; los códigos de
   verificación admiten 5 intentos y se comparan en tiempo constante.
 - **Límite de peticiones** en los endpoints de autenticación (20 por minuto) y de los agentes (60

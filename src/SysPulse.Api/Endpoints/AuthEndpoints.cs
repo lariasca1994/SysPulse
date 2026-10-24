@@ -7,13 +7,16 @@ using SysPulse.Infrastructure.Persistencia;
 namespace SysPulse.Api.Endpoints;
 
 public sealed record LoginSolicitud(string? Email, string? Password);
-public sealed record PasoSolicitud(string? Token, string? Codigo);
+public sealed record PasoSolicitud(string? Token, string? Codigo, string? Metodo = null);
+public sealed record MetodoSolicitud(string? Metodo);
 public sealed record CambioPasswordSolicitud(string? Token, string? Nueva);
 public sealed record ConfirmarTelegramSolicitud(string? UsuarioId, string? Codigo);
 
 /// <summary>
 /// Inicio de sesión por pasos. Cada respuesta indica el siguiente paso y, si aplica, un token temporal:
 ///   credenciales → [cambiar-password] → configurar-mfa | mfa → sesión (JWT).
+/// El segundo factor es obligatorio: app autenticadora (TOTP) o código por correo, a elección; desde
+/// "Mi cuenta" se agrega el otro método y se elige cuál se pide por defecto.
 /// </summary>
 public static class AuthEndpoints
 {
@@ -67,7 +70,7 @@ public static class AuthEndpoints
                 PasoLogin.FaltaTelegram => Results.Json(new { paso = "verificar-telegram", usuarioId = r.Usuario!.Id.ToString(), mensaje = "Falta verificar tu Telegram." }, statusCode: 403),
                 PasoLogin.CambiarPassword => Results.Ok(new { paso = "cambiar-password", token = tokens.Paso(r.Usuario!, "cambiar-password") }),
                 PasoLogin.ConfigurarMfa => Results.Ok(new { paso = "configurar-mfa", token = tokens.Paso(r.Usuario!, "configurar-mfa") }),
-                _ => Results.Ok(new { paso = "mfa", token = tokens.Paso(r.Usuario!, "mfa") }),
+                _ => Results.Ok(new { paso = "mfa", token = tokens.Paso(r.Usuario!, "mfa"), metodos = Metodos(r.Usuario!) }),
             };
         });
 
@@ -78,8 +81,8 @@ public static class AuthEndpoints
             var error = await cuentas.CambiarPasswordInicialAsync(usuario, s.Nueva, Ip(http), ct);
             if (error is not null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["nueva"] = [error] });
             var actualizado = (await cuentas.BuscarAsync(usuario.Id.ToString(), ct))!;
-            return actualizado.Mfa.Activo
-                ? Results.Ok(new { paso = "mfa", token = tokens.Paso(actualizado, "mfa") })
+            return ServicioCuentas.Estado(actualizado).Configurado
+                ? Results.Ok(new { paso = "mfa", token = tokens.Paso(actualizado, "mfa"), metodos = Metodos(actualizado) })
                 : Results.Ok(new { paso = "configurar-mfa", token = tokens.Paso(actualizado, "configurar-mfa") });
         });
 
@@ -105,9 +108,34 @@ public static class AuthEndpoints
         {
             var usuario = await UsuarioDelPasoAsync(s.Token, "mfa", cuentas, tokens, ct);
             if (usuario is null) return Results.Problem("La sesión de este paso venció. Inicia sesión de nuevo.", statusCode: 401);
-            return await cuentas.VerificarMfaAsync(usuario, s.Codigo, Ip(http), ct)
+            var metodo = s.Metodo ?? ServicioCuentas.Estado(usuario).Preferido;
+            var resultado = await cuentas.ComprobarCodigoAsync(usuario, metodo, s.Codigo, Ip(http), ct);
+            return resultado == ResultadoCodigo.Correcto
                 ? Results.Ok(new { sesion = Sesion(usuario, tokens) })
-                : Results.Problem("El código no es correcto.", statusCode: 400);
+                : Results.Problem(ServicioCuentas.Mensaje(resultado), statusCode: resultado == ResultadoCodigo.Bloqueado ? 423 : 400);
+        });
+
+        // ───── Código por correo (al configurar el segundo factor o al ingresar) ─────
+        g.MapPost("/mfa/correo/enviar", async (PasoSolicitud s, ServicioCuentas cuentas, Tokens tokens, HttpContext http, CancellationToken ct) =>
+        {
+            var usuario = await UsuarioDelPasoAsync(s.Token, "configurar-mfa", cuentas, tokens, ct)
+                ?? await UsuarioDelPasoAsync(s.Token, "mfa", cuentas, tokens, ct);
+            if (usuario is null) return Results.Problem("La sesión de este paso venció. Inicia sesión de nuevo.", statusCode: 401);
+            var estado = ServicioCuentas.Estado(usuario);
+            if (estado.Configurado && !estado.Correo) return Results.Problem("Tu cuenta no usa el código por correo.", statusCode: 400);
+            return await cuentas.EnviarCodigoCorreoAsync(usuario, Ip(http), ct)
+                ? Results.Ok(new { mensaje = $"Enviamos un código a {Enmascarar(usuario.Email)}. Vence en 10 minutos." })
+                : Results.Problem("Ya enviamos 3 códigos en los últimos 10 minutos. Usa el último o espera un momento.", statusCode: 429);
+        });
+
+        g.MapPost("/mfa/correo/activar", async (PasoSolicitud s, ServicioCuentas cuentas, Tokens tokens, HttpContext http, CancellationToken ct) =>
+        {
+            var usuario = await UsuarioDelPasoAsync(s.Token, "configurar-mfa", cuentas, tokens, ct);
+            if (usuario is null) return Results.Problem("La sesión de este paso venció. Inicia sesión de nuevo.", statusCode: 401);
+            var (codigos, error) = await cuentas.ActivarCorreoAsync(usuario, s.Codigo, Ip(http), ct);
+            if (error is not null) return Results.Problem(error, statusCode: 400);
+            var actualizado = (await cuentas.BuscarAsync(usuario.Id.ToString(), ct))!;
+            return Results.Ok(new { codigosRecuperacion = codigos, sesion = Sesion(actualizado, tokens) });
         });
 
         app.MapGet("/api/auth/yo", async (ClaimsPrincipal user, ServicioCuentas cuentas, CancellationToken ct) =>
@@ -147,6 +175,60 @@ public static class AuthEndpoints
             return Results.Ok(new { codigosRecuperacion = codigos, sesion = Sesion(actualizado!, tokens) });
         }).RequireAuthorization();
 
+        // ───── Métodos del segundo factor (Mi cuenta) ─────
+        app.MapGet("/api/auth/mfa", async (ClaimsPrincipal user, ServicioCuentas cuentas, CancellationToken ct) =>
+        {
+            var usuario = await cuentas.BuscarAsync(user.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "", ct);
+            return usuario is null ? Results.Unauthorized() : Results.Ok(Metodos(usuario));
+        }).RequireAuthorization();
+
+        g.MapPost("/mfa/agregar/app/iniciar", async (ClaimsPrincipal user, ServicioCuentas cuentas, CancellationToken ct) =>
+        {
+            var usuario = await cuentas.BuscarAsync(user.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "", ct);
+            if (usuario is null) return Results.Unauthorized();
+            if (usuario.Mfa.Activo) return Results.Problem("La app autenticadora ya está activa.", statusCode: 400);
+            var config = await cuentas.IniciarMfaAsync(usuario, ct);
+            return Results.Ok(new { secreto = config.Secreto, uri = config.UriQr });
+        }).RequireAuthorization();
+
+        g.MapPost("/mfa/agregar/app/activar", async (PasoSolicitud s, ClaimsPrincipal user, ServicioCuentas cuentas, HttpContext http, CancellationToken ct) =>
+        {
+            var usuario = await cuentas.BuscarAsync(user.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "", ct);
+            if (usuario is null) return Results.Unauthorized();
+            return await cuentas.ActivarMfaAsync(usuario, s.Codigo, Ip(http), ct) is null
+                ? Results.Problem("El código no es correcto. Revisa la hora de tu teléfono e inténtalo de nuevo.", statusCode: 400)
+                : Results.Ok(Metodos((await cuentas.BuscarAsync(usuario.Id.ToString(), ct))!));
+        }).RequireAuthorization();
+
+        g.MapPost("/mfa/agregar/correo/enviar", async (ClaimsPrincipal user, ServicioCuentas cuentas, HttpContext http, CancellationToken ct) =>
+        {
+            var usuario = await cuentas.BuscarAsync(user.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "", ct);
+            if (usuario is null) return Results.Unauthorized();
+            if (usuario.Mfa.CorreoActivo) return Results.Problem("El código por correo ya está activo.", statusCode: 400);
+            return await cuentas.EnviarCodigoCorreoAsync(usuario, Ip(http), ct)
+                ? Results.Ok(new { mensaje = $"Enviamos un código a {Enmascarar(usuario.Email)}. Vence en 10 minutos." })
+                : Results.Problem("Ya enviamos 3 códigos en los últimos 10 minutos. Usa el último o espera un momento.", statusCode: 429);
+        }).RequireAuthorization();
+
+        g.MapPost("/mfa/agregar/correo/activar", async (PasoSolicitud s, ClaimsPrincipal user, ServicioCuentas cuentas, HttpContext http, CancellationToken ct) =>
+        {
+            var usuario = await cuentas.BuscarAsync(user.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "", ct);
+            if (usuario is null) return Results.Unauthorized();
+            var (_, error) = await cuentas.ActivarCorreoAsync(usuario, s.Codigo, Ip(http), ct);
+            return error is not null
+                ? Results.Problem(error, statusCode: 400)
+                : Results.Ok(Metodos((await cuentas.BuscarAsync(usuario.Id.ToString(), ct))!));
+        }).RequireAuthorization();
+
+        g.MapPost("/mfa/preferido", async (MetodoSolicitud s, ClaimsPrincipal user, ServicioCuentas cuentas, HttpContext http, CancellationToken ct) =>
+        {
+            var usuario = await cuentas.BuscarAsync(user.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "", ct);
+            if (usuario is null) return Results.Unauthorized();
+            return await cuentas.PreferirAsync(usuario, s.Metodo, Ip(http), ct)
+                ? Results.Ok(Metodos((await cuentas.BuscarAsync(usuario.Id.ToString(), ct))!))
+                : Results.Problem("Ese método no está activo en tu cuenta.", statusCode: 400);
+        }).RequireAuthorization();
+
         // Respuesta idéntica exista o no el correo (no revela cuentas). En desarrollo devuelve el enlace (correo simulado).
         g.MapPost("/password/olvide", async (OlvidePasswordSolicitud s, ServicioCuentas cuentas, HttpContext http, CancellationToken ct) =>
         {
@@ -166,6 +248,19 @@ public static class AuthEndpoints
         expira = DateTime.UtcNow + Tokens.DuracionSesion,
         usuario = Perfil(u),
     };
+
+    private static object Metodos(UsuarioDoc u)
+    {
+        var e = ServicioCuentas.Estado(u);
+        return new { app = e.App, correo = e.Correo, preferido = e.Preferido };
+    }
+
+    /// <summary>Correo parcial (an***@dominio.com) para confirmar a dónde llegó el código.</summary>
+    private static string Enmascarar(string email)
+    {
+        var arroba = email.IndexOf('@', StringComparison.Ordinal);
+        return arroba <= 2 ? email : $"{email[..2]}***{email[arroba..]}";
+    }
 
     private static object Perfil(UsuarioDoc u) => new
     {

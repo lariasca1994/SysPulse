@@ -19,6 +19,14 @@ public sealed record ResultadoLogin(PasoLogin Paso, UsuarioDoc? Usuario, DateTim
 
 public sealed record ConfiguracionMfa(string Secreto, string UriQr);
 
+/// <summary>Métodos activos del segundo factor y el que se pide por defecto ("app" o "correo").</summary>
+public sealed record EstadoMfa(bool App, bool Correo, string? Preferido)
+{
+    public bool Configurado => App || Correo;
+}
+
+public enum ResultadoCodigo { Correcto, Incorrecto, Vencido, Bloqueado }
+
 /// <summary>
 /// Cuentas de usuario (sección 12): registro propio con nivel N1/N2/N3, verificación de correo y de Telegram,
 /// contraseña con hash PBKDF2, bloqueo por intentos, MFA TOTP con códigos de recuperación, y admin semilla.
@@ -295,7 +303,7 @@ public sealed class ServicioCuentas(
         if (!usuario.EmailVerificado) return new(PasoLogin.FaltaCorreo, usuario);
         if (!usuario.Telegram.Verificado && usuario.Rol != Roles.Admin) return new(PasoLogin.FaltaTelegram, usuario);
         if (usuario.DebeCambiarPassword) return new(PasoLogin.CambiarPassword, usuario);
-        return new(usuario.Mfa.Activo ? PasoLogin.Mfa : PasoLogin.ConfigurarMfa, usuario);
+        return new(Estado(usuario).Configurado ? PasoLogin.Mfa : PasoLogin.ConfigurarMfa, usuario);
     }
 
     public async Task<UsuarioDoc?> BuscarAsync(string usuarioId, CancellationToken ct) =>
@@ -316,8 +324,146 @@ public sealed class ServicioCuentas(
 
     // ───────────── MFA ─────────────
 
+    public const string MetodoApp = "app";
+    public const string MetodoCorreo = "correo";
+    private static readonly TimeSpan VigenciaCodigoCorreo = TimeSpan.FromMinutes(10);
+    private const int MaxEnviosCorreo = 3;
+    private const int MaxFallosMfa = 5;
+
+    public static EstadoMfa Estado(UsuarioDoc u)
+    {
+        ArgumentNullException.ThrowIfNull(u);
+        var preferido = u.Mfa.Preferido;
+        if ((preferido == MetodoApp && !u.Mfa.Activo) || (preferido == MetodoCorreo && !u.Mfa.CorreoActivo) || preferido is not (MetodoApp or MetodoCorreo))
+            preferido = u.Mfa.Activo ? MetodoApp : u.Mfa.CorreoActivo ? MetodoCorreo : null;
+        return new EstadoMfa(u.Mfa.Activo, u.Mfa.CorreoActivo, preferido);
+    }
+
+    /// <summary>Envía un código de 6 dígitos al correo de la cuenta. False si ya se enviaron 3 en 10 minutos.</summary>
+    public async Task<bool> EnviarCodigoCorreoAsync(UsuarioDoc usuario, string? ip, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(usuario);
+        var ahora = DateTime.UtcNow;
+        var recientes = usuario.Mfa.EnviosCorreo.Where(e => ahora - e < VigenciaCodigoCorreo).ToList();
+        if (recientes.Count >= MaxEnviosCorreo) return false;
+        recientes.Add(ahora);
+
+        var codigo = Cifrado.Codigo6();
+        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
+            .Set(u => u.Mfa.CodigoCorreoHash, Cifrado.Hash(codigo))
+            .Set(u => u.Mfa.CodigoCorreoExpira, ahora + VigenciaCodigoCorreo)
+            .Set(u => u.Mfa.CodigoCorreoIntentos, 0)
+            .Set(u => u.Mfa.EnviosCorreo, recientes), cancellationToken: ct).ConfigureAwait(false);
+        var (asunto, html, texto) = PlantillasCorreo.CodigoVerificacion(usuario.Nombre, codigo);
+        await correo.EnviarAsync(usuario.Email, asunto, html, texto, ct).ConfigureAwait(false);
+        await auditoria.RegistrarAsync("cuenta.mfa_codigo_correo_enviado", usuario.Id, ip, ct: ct).ConfigureAwait(false);
+        return true;
+    }
+
+    /// <summary>
+    /// Comprueba un código del método indicado (o un código de recuperación). 5 errores seguidos bloquean el
+    /// segundo factor 15 minutos; un acierto reinicia el contador.
+    /// </summary>
+    public async Task<ResultadoCodigo> ComprobarCodigoAsync(UsuarioDoc usuario, string? metodo, string? codigo, string? ip, CancellationToken ct, string evento = "login")
+    {
+        ArgumentNullException.ThrowIfNull(usuario);
+        var actual = await db.Usuarios.Find(u => u.Id == usuario.Id).FirstOrDefaultAsync(ct).ConfigureAwait(false);
+        if (actual is null) return ResultadoCodigo.Incorrecto;
+        if (actual.Mfa.BloqueoHasta > DateTime.UtcNow) return ResultadoCodigo.Bloqueado;
+
+        var resultado = metodo == MetodoCorreo
+            ? await ComprobarCorreoAsync(actual, codigo, ct).ConfigureAwait(false)
+            : ResultadoCodigo.Incorrecto;
+        if (resultado != ResultadoCodigo.Correcto && await VerificarMfaAsync(actual, codigo, ip, ct, evento).ConfigureAwait(false))
+            resultado = ResultadoCodigo.Correcto;
+
+        if (resultado == ResultadoCodigo.Correcto)
+        {
+            await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
+                .Set(u => u.Mfa.Fallos, 0).Set(u => u.Mfa.BloqueoHasta, null).Set(u => u.UltimaConexion, DateTime.UtcNow),
+                cancellationToken: ct).ConfigureAwait(false);
+            if (metodo == MetodoCorreo) await auditoria.RegistrarAsync($"{evento}.mfa_correo_ok", usuario.Id, ip, ct: ct).ConfigureAwait(false);
+            return resultado;
+        }
+
+        var fallos = actual.Mfa.Fallos + 1;
+        var bloqueo = fallos >= MaxFallosMfa ? DateTime.UtcNow + DuracionBloqueo : (DateTime?)null;
+        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
+            .Set(u => u.Mfa.Fallos, bloqueo is null ? fallos : 0).Set(u => u.Mfa.BloqueoHasta, bloqueo),
+            cancellationToken: ct).ConfigureAwait(false);
+        if (bloqueo is not null) await auditoria.RegistrarAsync($"{evento}.mfa_bloqueado", usuario.Id, ip, ct: ct).ConfigureAwait(false);
+        return bloqueo is not null ? ResultadoCodigo.Bloqueado : resultado;
+    }
+
+    public static string Mensaje(ResultadoCodigo resultado) => resultado switch
+    {
+        ResultadoCodigo.Vencido => "El código venció o ya se usó. Pide uno nuevo.",
+        ResultadoCodigo.Bloqueado => "Demasiados códigos incorrectos. Espera 15 minutos e intenta de nuevo.",
+        _ => "El código no es correcto.",
+    };
+
+    private async Task<ResultadoCodigo> ComprobarCorreoAsync(UsuarioDoc actual, string? codigo, CancellationToken ct)
+    {
+        if (actual.Mfa.CodigoCorreoHash is null || actual.Mfa.CodigoCorreoExpira < DateTime.UtcNow || actual.Mfa.CodigoCorreoIntentos >= MaxIntentosCodigo)
+            return ResultadoCodigo.Vencido;
+        var limpio = codigo?.Trim() ?? "";
+        if (limpio.Length == 6 && Cifrado.IgualesTiempoConstante(actual.Mfa.CodigoCorreoHash, Cifrado.Hash(limpio)))
+        {
+            // Condición sobre la huella: dos peticiones simultáneas con el mismo código no pasan ambas.
+            var r = await db.Usuarios.UpdateOneAsync(u => u.Id == actual.Id && u.Mfa.CodigoCorreoHash == actual.Mfa.CodigoCorreoHash,
+                Builders<UsuarioDoc>.Update.Set(u => u.Mfa.CodigoCorreoHash, null).Set(u => u.Mfa.CodigoCorreoExpira, null),
+                cancellationToken: ct).ConfigureAwait(false);
+            return r.ModifiedCount == 1 ? ResultadoCodigo.Correcto : ResultadoCodigo.Vencido;
+        }
+        await db.Usuarios.UpdateOneAsync(u => u.Id == actual.Id, Builders<UsuarioDoc>.Update.Inc(u => u.Mfa.CodigoCorreoIntentos, 1),
+            cancellationToken: ct).ConfigureAwait(false);
+        return ResultadoCodigo.Incorrecto;
+    }
+
+    /// <summary>
+    /// Activa el código por correo con el primer código correcto. Si es el primer método de la cuenta, devuelve
+    /// 10 códigos de recuperación nuevos (se muestran una sola vez); si ya tenía la app, una lista vacía.
+    /// </summary>
+    public async Task<(IReadOnlyList<string>? Codigos, string? Error)> ActivarCorreoAsync(UsuarioDoc usuario, string? codigo, string? ip, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(usuario);
+        var actual = await db.Usuarios.Find(u => u.Id == usuario.Id).FirstOrDefaultAsync(ct).ConfigureAwait(false);
+        if (actual is null || actual.Mfa.CorreoActivo) return (null, "El código por correo ya está activo.");
+        if (actual.Mfa.BloqueoHasta > DateTime.UtcNow) return (null, Mensaje(ResultadoCodigo.Bloqueado));
+        var resultado = await ComprobarCorreoAsync(actual, codigo, ct).ConfigureAwait(false);
+        if (resultado != ResultadoCodigo.Correcto) return (null, Mensaje(resultado));
+
+        var primerMetodo = !Estado(actual).Configurado;
+        var recuperacion = primerMetodo ? Mfa.CodigosRecuperacion() : [];
+        var update = Builders<UsuarioDoc>.Update
+            .Set(u => u.Mfa.CorreoActivo, true)
+            .Set(u => u.Mfa.Fallos, 0)
+            .Set(u => u.UltimaConexion, DateTime.UtcNow);
+        if (primerMetodo)
+            update = update
+                .Set(u => u.Mfa.Preferido, MetodoCorreo)
+                .Set(u => u.Mfa.CodigosRecuperacionHash, recuperacion.Select(c => Cifrado.Hash(Mfa.NormalizarCodigoRecuperacion(c))).ToList())
+                .Set(u => u.SelloSeguridad, Guid.NewGuid().ToString("N"));
+        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, update, cancellationToken: ct).ConfigureAwait(false);
+        await auditoria.RegistrarAsync("cuenta.mfa_correo_activado", usuario.Id, ip, ct: ct).ConfigureAwait(false);
+        return (recuperacion, null);
+    }
+
+    public async Task<bool> PreferirAsync(UsuarioDoc usuario, string? metodo, string? ip, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(usuario);
+        var estado = Estado(usuario);
+        if (!((metodo == MetodoApp && estado.App) || (metodo == MetodoCorreo && estado.Correo))) return false;
+        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update.Set(u => u.Mfa.Preferido, metodo), cancellationToken: ct).ConfigureAwait(false);
+        await auditoria.RegistrarAsync("cuenta.mfa_preferido", usuario.Id, ip, metodo, ct: ct).ConfigureAwait(false);
+        return true;
+    }
+
     public async Task<ConfiguracionMfa> IniciarMfaAsync(UsuarioDoc usuario, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(usuario);
+        // Con la app ya activa, cambiarla es otro flujo (IniciarCambioMfaAsync): aquí no se pisa el secreto.
+        if (usuario.Mfa.Activo) throw new InvalidOperationException("La app autenticadora ya está activa.");
         var secreto = Mfa.NuevoSecreto();
         await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
             .Set(u => u.Mfa.SecretoCifrado, cifrado.Cifrar(secreto))
@@ -333,13 +479,18 @@ public sealed class ServicioCuentas(
         var paso = Mfa.Verificar(cifrado.Descifrar(actual.Mfa.SecretoCifrado), codigo, actual.Mfa.UltimoPaso);
         if (paso is null) return null;
 
-        var recuperacion = Mfa.CodigosRecuperacion();
-        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
+        var primerMetodo = !actual.Mfa.CorreoActivo;
+        var recuperacion = primerMetodo ? Mfa.CodigosRecuperacion() : [];
+        var update = Builders<UsuarioDoc>.Update
             .Set(u => u.Mfa.Activo, true)
             .Set(u => u.Mfa.UltimoPaso, paso.Value)
-            .Set(u => u.Mfa.CodigosRecuperacionHash, recuperacion.Select(c => Cifrado.Hash(Mfa.NormalizarCodigoRecuperacion(c))).ToList())
-            .Set(u => u.SelloSeguridad, Guid.NewGuid().ToString("N"))
-            .Set(u => u.UltimaConexion, DateTime.UtcNow), cancellationToken: ct).ConfigureAwait(false);
+            .Set(u => u.UltimaConexion, DateTime.UtcNow);
+        if (primerMetodo)
+            update = update
+                .Set(u => u.Mfa.Preferido, MetodoApp)
+                .Set(u => u.Mfa.CodigosRecuperacionHash, recuperacion.Select(c => Cifrado.Hash(Mfa.NormalizarCodigoRecuperacion(c))).ToList())
+                .Set(u => u.SelloSeguridad, Guid.NewGuid().ToString("N"));
+        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, update, cancellationToken: ct).ConfigureAwait(false);
         await auditoria.RegistrarAsync("cuenta.mfa_activado", usuario.Id, ip, ct: ct).ConfigureAwait(false);
         return recuperacion;
     }
@@ -408,9 +559,12 @@ public sealed class ServicioCuentas(
     public async Task<bool> VerificarMfaAsync(UsuarioDoc usuario, string? codigo, string? ip, CancellationToken ct, string evento = "login")
     {
         var actual = await db.Usuarios.Find(u => u.Id == usuario.Id).FirstOrDefaultAsync(ct).ConfigureAwait(false);
-        if (actual?.Mfa.SecretoCifrado is null || !actual.Mfa.Activo || string.IsNullOrWhiteSpace(codigo)) return false;
+        if (actual is null || string.IsNullOrWhiteSpace(codigo)) return false;
 
-        var paso = Mfa.Verificar(cifrado.Descifrar(actual.Mfa.SecretoCifrado), codigo.Trim(), actual.Mfa.UltimoPaso);
+        // Sin app activa (cuenta solo con correo) se aceptan igual los códigos de recuperación.
+        var paso = actual.Mfa.Activo && actual.Mfa.SecretoCifrado is not null
+            ? Mfa.Verificar(cifrado.Descifrar(actual.Mfa.SecretoCifrado), codigo.Trim(), actual.Mfa.UltimoPaso)
+            : null;
         if (paso is not null)
         {
             // Condición sobre ultimo_paso: dos peticiones simultáneas con el mismo código no pasan ambas.
