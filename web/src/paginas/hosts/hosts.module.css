@@ -124,7 +124,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
-  min-height: 300px;
   padding: var(--sp-4) var(--sp-4) var(--sp-3);
   overflow: hidden;
   border: 1px solid var(--border);
@@ -182,12 +181,14 @@ a.tarjeta:hover {
 }
 
 .nombre {
+  display: -webkit-box;
   overflow: hidden;
   font-size: var(--fs-16);
   font-weight: 600;
   line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .tipo {
@@ -389,13 +390,17 @@ a.tarjeta:hover {
 }
 
 .consumoRed li {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 2px var(--sp-2);
+  gap: var(--sp-2);
   color: var(--text-muted);
   font-size: var(--fs-13);
+}
+
+.consumoRed li > .num {
+  font-size: var(--fs-12);
+  white-space: nowrap;
 }
 
 .consumoRed li[data-activa] {
@@ -406,6 +411,9 @@ a.tarjeta:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .consumoActiva {
@@ -499,5 +507,323 @@ a.tarjeta:hover .flecha {
 
   .tarjeta {
     min-height: 0;
+  }
+}
+
+/* ───── Barra de herramientas: búsqueda, filtros y vista ───── */
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.buscador {
+  display: flex;
+  /* Primera fila: búsqueda y selector de vista; los filtros pasan a la segunda. */
+  flex: 1 1 calc(100% - 240px);
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text-muted);
+  transition: border-color var(--transition);
+}
+
+.buscador:focus-within {
+  border-color: var(--link);
+}
+
+.buscador input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-14);
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  order: 2;
+  gap: var(--sp-2);
+}
+
+.filtros + .filtros {
+  padding-left: var(--sp-3);
+  border-left: 1px solid var(--border);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-13);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.chip b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--link);
+  background: var(--primary-soft);
+  color: var(--text);
+}
+
+.chip[data-tono="atencion"] b {
+  color: var(--warning);
+}
+
+.chip:focus-visible,
+.botonVista:focus-visible,
+.tablaEquipo:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+.vistas {
+  display: inline-flex;
+  order: 1;
+  margin-left: auto;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.botonVista {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-13);
+  cursor: pointer;
+}
+
+.botonVista[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+}
+
+.sinResultados {
+  padding: var(--sp-8) var(--sp-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ───── Grupos por tipo de equipo ───── */
+.grupo + .grupo {
+  margin-top: var(--sp-8);
+}
+
+.grupoTitulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-3);
+  color: var(--text);
+  font-size: var(--fs-16);
+  font-weight: 600;
+}
+
+.grupoIcono {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.grupoConteo {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+}
+
+.grupoAtencion {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+
+/* ───── Vista de lista ───── */
+.tablaContenedor {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.tabla {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: var(--fs-13);
+}
+
+.tabla thead th {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tabla tbody th,
+.tabla td {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 400;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tabla tbody tr:last-child th,
+.tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tabla tbody tr {
+  transition: background var(--transition);
+}
+
+.tabla tbody tr:hover {
+  background: var(--surface-2);
+}
+
+.tabla tbody tr[data-salud="excepcion"] th {
+  box-shadow: inset 3px 0 0 var(--critical);
+}
+
+.tabla tbody tr[data-salud="advertencia"] th {
+  box-shadow: inset 3px 0 0 var(--warning-fill);
+}
+
+.tabla .numCol {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tablaEquipo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: inherit;
+  text-decoration: none;
+}
+
+.tablaEquipo:hover .tablaNombre {
+  color: var(--link);
+  text-decoration: underline;
+}
+
+.tablaNombre {
+  display: block;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tablaTipo {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+  white-space: nowrap;
+}
+
+.tablaEstado {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.tablaRed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.tablaRed .num {
+  color: var(--text);
+}
+
+.tablaReporte {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .vistas {
+    margin-left: 0;
+  }
+
+  .botonVista span {
+    display: none;
+  }
+}
+
+/* Sin reporte: los valores son viejos, se atenúan para no confundirlos con datos en vivo. */
+.tarjeta[data-conexion="sin-reporte"] .medidores,
+.tarjeta[data-conexion="sin-reporte"] .consumoRed {
+  opacity: .55;
+}
+
+@media (max-width: 640px) {
+  .filtros + .filtros {
+    padding-left: 0;
+    border-left: 0;
   }
 }

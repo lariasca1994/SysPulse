@@ -1,13 +1,13 @@
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { AlertTriangle, Cable, CheckCircle2, ChevronRight, Clock, RefreshCw, ServerCrash, Signal, Wifi } from "lucide-react";
+import { AlertTriangle, Cable, CheckCircle2, ChevronRight, Clock, Laptop, LayoutGrid, List, Monitor, RefreshCw, Search, ServerCrash, Signal, Smartphone, Wifi } from "lucide-react";
 import { hosts, type Host } from "../../api/hosts";
 import { useConsulta } from "../../api/useConsulta";
 import { useSesion } from "../../sesionContexto";
 import { puedeAgregarEquipos } from "../../api/admin";
 import { AltaEquipo } from "../admin/AltaEquipo";
 import { Alerta } from "../../componentes/ui/Basicos";
-import { describir, destacadas, duracion, hace, NOMBRE_CLASE, claseHost } from "./metricas";
+import { describir, destacadas, duracion, hace, nivel, NOMBRE_CLASE, claseHost, type Clase } from "./metricas";
 import { EtiquetaSalud, IconoHost, Medidor, PildoraConexion } from "./Piezas";
 import { useAhora } from "./useAhora";
 import s from "./hosts.module.css";
@@ -61,11 +61,209 @@ export default function SaludHosts() {
           <p>{puedeAgregarEquipos(usuario?.rol) ? "Pulsa «Agregar equipo», instala el agente con el código y aparecerá aquí en menos de un minuto." : "Un técnico N2 o N3 puede agregar equipos; aparecerán aquí en menos de un minuto."}</p>
         </div>
       ) : (
-        <section className={s.grid} aria-label="Hosts monitoreados">
-          {lista.map((h) => <TarjetaHost key={h.id} host={h} ahora={ahora} />)}
-        </section>
+        <Equipos lista={lista} ahora={ahora} />
       )}
     </>
+  );
+}
+
+type Vista = "tarjetas" | "lista";
+type FiltroEstado = "todos" | "atencion";
+type FiltroTipo = "todos" | Clase;
+
+const GRUPOS_CLASE: { clase: Clase; titulo: string; icono: ReactNode }[] = [
+  { clase: "escritorio", titulo: "Escritorios", icono: <Monitor size={16} aria-hidden="true" /> },
+  { clase: "portatil", titulo: "Portátiles", icono: <Laptop size={16} aria-hidden="true" /> },
+  { clase: "movil", titulo: "Celulares y tablets", icono: <Smartphone size={16} aria-hidden="true" /> },
+];
+
+/** Primero lo que requiere atención: excepción, advertencia, sin reporte, retrasado y, al final, lo saludable. */
+function prioridad(h: Host): number {
+  if (h.salud === "excepcion") return 0;
+  if (h.salud === "advertencia") return 1;
+  if (h.conexion === "sin-reporte") return 2;
+  if (h.conexion === "retrasado") return 3;
+  return 4;
+}
+const requiereAtencion = (h: Host) => prioridad(h) < 4;
+const ordenar = (a: Host, b: Host) => prioridad(a) - prioridad(b) || a.nombre.localeCompare(b.nombre, "es", { numeric: true });
+
+/** Preferencia recordada en este navegador (si el almacenamiento no está disponible, solo dura la visita). */
+function usePreferencia<T extends string>(clave: string, inicial: T, validos: readonly T[]): [T, (v: T) => void] {
+  const [valor, setValor] = useState<T>(() => {
+    try {
+      const guardado = localStorage.getItem(clave) as T | null;
+      return guardado && validos.includes(guardado) ? guardado : inicial;
+    } catch {
+      return inicial;
+    }
+  });
+  const guardar = (v: T) => {
+    setValor(v);
+    try {
+      localStorage.setItem(clave, v);
+    } catch {
+      // Sin almacenamiento: la preferencia solo dura esta visita.
+    }
+  };
+  return [valor, guardar];
+}
+
+function Equipos({ lista, ahora }: { lista: Host[]; ahora: number }) {
+  const [vista, setVista] = usePreferencia<Vista>("syspulse.hosts.vista", "tarjetas", ["tarjetas", "lista"]);
+  const [estado, setEstado] = usePreferencia<FiltroEstado>("syspulse.hosts.estado", "todos", ["todos", "atencion"]);
+  const [tipo, setTipo] = usePreferencia<FiltroTipo>("syspulse.hosts.tipo", "todos", ["todos", "escritorio", "portatil", "movil"]);
+  const [busqueda, setBusqueda] = useState("");
+
+  const conteoClase = useMemo(() => {
+    const c: Record<Clase, number> = { escritorio: 0, portatil: 0, movil: 0 };
+    for (const h of lista) c[claseHost(h)]++;
+    return c;
+  }, [lista]);
+  const atencion = lista.filter(requiereAtencion).length;
+
+  const texto = busqueda.trim().toLocaleLowerCase("es");
+  const visibles = lista
+    .filter((h) => estado === "todos" || requiereAtencion(h))
+    .filter((h) => tipo === "todos" || claseHost(h) === tipo)
+    .filter((h) => !texto || h.nombre.toLocaleLowerCase("es").includes(texto))
+    .sort(ordenar);
+
+  return (
+    <>
+      <div className={s.barra}>
+        <label className={s.buscador}>
+          <Search size={16} aria-hidden="true" />
+          <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar equipo" aria-label="Buscar equipo por nombre" />
+        </label>
+        <div className={s.filtros} role="group" aria-label="Filtrar por estado">
+          <Chip activo={estado === "todos"} onClick={() => setEstado("todos")}>Todos <b className="num">{lista.length}</b></Chip>
+          <Chip activo={estado === "atencion"} onClick={() => setEstado("atencion")} tono={atencion > 0 ? "atencion" : undefined}>
+            Requieren atención <b className="num">{atencion}</b>
+          </Chip>
+        </div>
+        <div className={s.filtros} role="group" aria-label="Filtrar por tipo de equipo">
+          <Chip activo={tipo === "todos"} onClick={() => setTipo("todos")}>Todos los tipos</Chip>
+          {GRUPOS_CLASE.filter((g) => conteoClase[g.clase] > 0).map((g) => (
+            <Chip key={g.clase} activo={tipo === g.clase} onClick={() => setTipo(g.clase)}>
+              {g.icono} {g.titulo} <b className="num">{conteoClase[g.clase]}</b>
+            </Chip>
+          ))}
+        </div>
+        <div className={s.vistas} role="group" aria-label="Vista">
+          <button type="button" className={s.botonVista} aria-pressed={vista === "tarjetas"} onClick={() => setVista("tarjetas")} title="Ver como tarjetas">
+            <LayoutGrid size={16} aria-hidden="true" /><span>Tarjetas</span>
+          </button>
+          <button type="button" className={s.botonVista} aria-pressed={vista === "lista"} onClick={() => setVista("lista")} title="Ver como lista">
+            <List size={16} aria-hidden="true" /><span>Lista</span>
+          </button>
+        </div>
+      </div>
+
+      {visibles.length === 0 ? (
+        <p className={s.sinResultados}>Ningún equipo coincide con la búsqueda o los filtros.</p>
+      ) : vista === "lista" ? (
+        <TablaEquipos lista={visibles} ahora={ahora} />
+      ) : (
+        GRUPOS_CLASE.map((g) => {
+          const grupo = visibles.filter((h) => claseHost(h) === g.clase);
+          if (grupo.length === 0) return null;
+          const conAtencion = grupo.filter(requiereAtencion).length;
+          return (
+            <section key={g.clase} className={s.grupo} aria-label={g.titulo}>
+              <h2 className={s.grupoTitulo}>
+                <span className={s.grupoIcono}>{g.icono}</span>
+                {g.titulo}
+                <span className={`${s.grupoConteo} num`}>{grupo.length}</span>
+                {conAtencion > 0 && <span className={s.grupoAtencion}>{conAtencion} requieren atención</span>}
+              </h2>
+              <div className={s.grid}>
+                {grupo.map((h) => <TarjetaHost key={h.id} host={h} ahora={ahora} />)}
+              </div>
+            </section>
+          );
+        })
+      )}
+    </>
+  );
+}
+
+function Chip({ activo, onClick, tono, children }: { activo: boolean; onClick: () => void; tono?: "atencion"; children: ReactNode }) {
+  return (
+    <button type="button" className={s.chip} aria-pressed={activo} data-tono={tono} onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+
+/** Vista compacta: una fila por equipo, para revisar muchos de un vistazo. */
+function TablaEquipos({ lista, ahora }: { lista: Host[]; ahora: number }) {
+  // Mismo color que en las tarjetas: amarillo o rojo si el valor pasa su umbral (en batería, menos es peor).
+  const valor = (h: Host, clave: string | undefined) => {
+    if (!clave || h.lecturas[clave] === undefined) return "—";
+    const v = h.lecturas[clave];
+    const tono = clave === "bateria_pct" ? (v <= 15 ? "excepcion" : v <= 30 ? "advertencia" : "ok") : nivel(h, clave);
+    return <span className={s.medidorValor} data-nivel={tono}>{describir(clave).formato(v)}</span>;
+  };
+  return (
+    <div className={s.tablaContenedor}>
+      <table className={s.tabla}>
+        <thead>
+          <tr>
+            <th scope="col">Equipo</th>
+            <th scope="col">Estado</th>
+            <th scope="col" className={s.numCol}>CPU / Batería</th>
+            <th scope="col" className={s.numCol}>RAM</th>
+            <th scope="col" className={s.numCol}>Disco</th>
+            <th scope="col">Red activa</th>
+            <th scope="col">Último reporte</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lista.map((h) => {
+            const l = h.lecturas;
+            const disco = Object.keys(l).filter((c) => /^disco_[A-Za-z]_pct$/.test(c)).sort((a, b) => l[b] - l[a])[0]
+              ?? (l.almacenamiento_pct !== undefined ? "almacenamiento_pct" : undefined);
+            const principal = h.tipo === "android" ? "bateria_pct" : "cpu_total";
+            return (
+              <tr key={h.id} data-salud={h.salud}>
+                <th scope="row">
+                  <Link to={`/hosts/${encodeURIComponent(h.id)}`} className={s.tablaEquipo}>
+                    <IconoHost host={h} size={16} />
+                    <span>
+                      <span className={s.tablaNombre}>{h.nombre}</span>
+                      <span className={s.tablaTipo}>{NOMBRE_CLASE[claseHost(h)]}</span>
+                    </span>
+                  </Link>
+                </th>
+                <td><span className={s.tablaEstado}><EtiquetaSalud salud={h.salud} /><PildoraConexion conexion={h.conexion} /></span></td>
+                <td className={`${s.numCol} num`}>{valor(h, principal)}</td>
+                <td className={`${s.numCol} num`}>{valor(h, "ram_pct")}</td>
+                <td className={`${s.numCol} num`}>{valor(h, disco)}</td>
+                <td><RedResumen host={h} /></td>
+                <td className={s.tablaReporte}>{hace(h.ultimoReporte, ahora)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Conexión activa (o la de más tráfico) y su bajada acumulada, para la vista de lista. */
+function RedResumen({ host }: { host: Host }) {
+  const l = host.lecturas;
+  const filas = CONEXIONES
+    .map((c) => ({ ...c, bajada: l[`${c.prefijo}_bajada_mb`] ?? 0, tasa: (l[`${c.prefijo}_bajada_mbs`] ?? 0) + (l[`${c.prefijo}_subida_mbs`] ?? 0) }))
+    .filter((c) => c.bajada >= 0.05 || c.tasa > 0);
+  if (filas.length === 0) return <span className={s.tablaTipo}>—</span>;
+  const activa = (l.red_tipo !== undefined ? filas.find((c) => c.tipo === Math.round(l.red_tipo)) : undefined)
+    ?? [...filas].sort((a, b) => b.tasa - a.tasa || b.bajada - a.bajada)[0];
+  return (
+    <span className={s.tablaRed}>
+      {activa.icono} {activa.nombre} <span className="num">↓ {describir("red_wifi_bajada_mb").formato(activa.bajada)}</span>
+    </span>
   );
 }
 
@@ -78,11 +276,11 @@ function TarjetaHost({ host, ahora }: { host: Host; ahora: number }) {
     : l.red_entrada_mbs !== undefined ? `↓ ${describir("red_entrada_mbs").formato(l.red_entrada_mbs)}  ↑ ${describir("red_salida_mbs").formato(l.red_salida_mbs ?? 0)}` : null;
 
   return (
-    <Link to={`/hosts/${encodeURIComponent(host.id)}`} className={s.tarjeta} data-salud={host.salud}>
+    <Link to={`/hosts/${encodeURIComponent(host.id)}`} className={s.tarjeta} data-salud={host.salud} data-conexion={host.conexion}>
       <div className={s.tarjetaCabeza}>
         <IconoHost host={host} />
         <div className={s.identidad}>
-          <h2 className={s.nombre}>{host.nombre}</h2>
+          <h3 className={s.nombre} title={host.nombre}>{host.nombre}</h3>
           <p className={s.tipo}>{NOMBRE_CLASE[claseHost(host)]}</p>
         </div>
         <PildoraConexion conexion={host.conexion} />
