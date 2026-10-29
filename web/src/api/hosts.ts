@@ -21,6 +21,8 @@ export interface Host {
   nombre: string;
   tipo: "windows" | "android" | string;
   versionAgente: string | null;
+  /** Modelo comercial (p. ej. "Lenovo Tab M11"); null en agentes que aún no lo envían. */
+  modelo: string | null;
   ultimoArranque: string | null;
   ultimoReporte: string | null;
   conexion: Conexion;

@@ -74,7 +74,7 @@ public sealed partial class MotorAgente(
             await IntentarAsync("registrar host en Atlas", async () =>
             {
                 await _atlas.AsegurarIndicesAsync(ct).ConfigureAwait(false);
-                await _atlas.RegistrarHostAsync(opciones.HostId, opciones.TipoHost, version, ct).ConfigureAwait(false);
+                await _atlas.RegistrarHostAsync(opciones.HostId, opciones.TipoHost, version, opciones.Modelo, ct).ConfigureAwait(false);
             }).ConfigureAwait(false);
             await ConsultarConfiguracionAsync(ct).ConfigureAwait(false);
         }

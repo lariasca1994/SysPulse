@@ -14,7 +14,7 @@ public sealed record UmbralVista(double Advertencia, double Excepcion);
 public sealed record AlertaVista(string Metrica, double Valor, double Umbral, string Severidad);
 
 /// <summary>
-/// Estado de un host para la web. <see cref="Nombre"/> es genérico (nunca el modelo ni el nombre del equipo).
+/// Estado de un host para la web. <see cref="Nombre"/> es genérico; <see cref="Modelo"/> es el modelo comercial (nunca el nombre del equipo).
 /// <see cref="Conexion"/>: en-linea | retrasado | sin-reporte.
 /// <see cref="Salud"/>: ok | advertencia | excepcion | desconocida (sin lecturas recientes).
 /// Las claves de <see cref="Lecturas"/> y <see cref="Umbrales"/> usan '_' (cpu_total, disco_C_pct…), igual que Atlas.
@@ -24,6 +24,7 @@ public sealed record HostVista(
     string Nombre,
     string Tipo,
     string? VersionAgente,
+    string? Modelo,
     DateTime? UltimoArranque,
     DateTime? UltimoReporte,
     string Conexion,
@@ -33,7 +34,7 @@ public sealed record HostVista(
     IReadOnlyList<AlertaVista> Alertas);
 
 /// <summary>Equipo para la administración: nombre genérico, tipo, versión y si está retirado.</summary>
-public sealed record EquipoVista(string Id, string Nombre, string Clase, string Tipo, string? VersionAgente, DateTime? UltimoReporte, string Conexion, bool Retirado, DateTime? RetiradoEn);
+public sealed record EquipoVista(string Id, string Nombre, string Clase, string Tipo, string? VersionAgente, string? Modelo, DateTime? UltimoReporte, string Conexion, bool Retirado, DateTime? RetiradoEn);
 
 /// <summary>Punto de una serie: [ts en ms Unix, promedio, máximo].</summary>
 public sealed record SerieVista(string? Unidad, IReadOnlyList<double[]> Puntos);
@@ -93,8 +94,8 @@ public sealed partial class ServicioHosts(ContextoMongo mongo, TimeProvider relo
         var alias = await AliasAsync(vistas, ct).ConfigureAwait(false);
         return [.. vistas
             .Select(v => alias.TryGetValue(v.Id, out var a)
-                ? new EquipoVista(v.Id, a.Nombre, a.Clase, v.Tipo, v.VersionAgente, v.UltimoReporte, v.Conexion, a.Retirado, a.RetiradoEn)
-                : new EquipoVista(v.Id, NuevoNombre(v), Clase(v), v.Tipo, v.VersionAgente, v.UltimoReporte, v.Conexion, false, null))
+                ? new EquipoVista(v.Id, a.Nombre, a.Clase, v.Tipo, v.VersionAgente, v.Modelo, v.UltimoReporte, v.Conexion, a.Retirado, a.RetiradoEn)
+                : new EquipoVista(v.Id, NuevoNombre(v), Clase(v), v.Tipo, v.VersionAgente, v.Modelo, v.UltimoReporte, v.Conexion, false, null))
             .OrderBy(e => e.Retirado).ThenBy(e => e.Nombre, StringComparer.CurrentCulture)];
     }
 
@@ -116,7 +117,7 @@ public sealed partial class ServicioHosts(ContextoMongo mongo, TimeProvider relo
     }
 
     /// <summary>
-    /// La web nunca recibe fabricante, modelo ni nombre del equipo. La primera vez que un equipo reporta lecturas se le
+    /// La web nunca recibe el nombre del equipo (solo un nombre genérico y el modelo comercial). La primera vez que un equipo reporta lecturas se le
     /// asigna un nombre genérico con número fijo por tipo ("Equipo portátil 2"): agregar equipos no renombra a los demás.
     /// </summary>
     private async Task<Dictionary<string, HostAliasDoc>> AliasAsync(List<HostVista> vistas, CancellationToken ct)
@@ -217,8 +218,8 @@ public sealed partial class ServicioHosts(ContextoMongo mongo, TimeProvider relo
 
         DateTime? arranque = host.TryGetValue("ultimo_arranque", out var a) && a.IsValidDateTime ? a.ToUniversalTime() : null;
         return new HostVista(
-            // El nombre real (modelo) se descarta aquí; Anonimizar asigna el genérico.
-            host["_id"].ToString()!, "", tipo, Texto(host, "version_agente"),
+            // El nombre del equipo nunca llega; Anonimizar asigna el genérico. El modelo comercial sí se muestra.
+            host["_id"].ToString()!, "", tipo, Texto(host, "version_agente"), ModeloSeguro(Texto(host, "modelo")),
             arranque, reporte, conexion, salud, lecturas, umbrales, alertas);
     }
 
@@ -252,6 +253,19 @@ public sealed partial class ServicioHosts(ContextoMongo mongo, TimeProvider relo
     private static int OrdenSalud(string salud) => salud switch { "excepcion" => 0, "advertencia" => 1, "desconocida" => 2, _ => 3 };
 
     private static string Nombre(Severidad s) => s == Severidad.Excepcion ? "excepcion" : "advertencia";
+
+    /// <summary>
+    /// Modelo comercial del equipo (p. ej. "Lenovo Tab M11"): solo letras, números y signos simples, máximo 60
+    /// caracteres. Cualquier otro valor se descarta, aunque venga de un agente viejo o alterado.
+    /// </summary>
+    internal static string? ModeloSeguro(string? modelo)
+    {
+        var limpio = modelo?.Trim();
+        return limpio is { Length: > 0 and <= 60 } && ModeloValido().IsMatch(limpio) ? limpio : null;
+    }
+
+    [GeneratedRegex(@"^[\p{L}\p{N} ._()+\-/·]+$")]
+    private static partial Regex ModeloValido();
 
     private static string? Texto(BsonDocument d, string campo) => d.TryGetValue(campo, out var v) && v.IsString ? v.AsString : null;
 

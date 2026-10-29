@@ -10,7 +10,7 @@ namespace SysPulse.Agent.Core.Envio;
 public interface IPublicador
 {
     Task AsegurarIndicesAsync(CancellationToken ct);
-    Task RegistrarHostAsync(string host, string tipo, string version, CancellationToken ct);
+    Task RegistrarHostAsync(string host, string tipo, string version, string? modelo, CancellationToken ct);
     Task PublicarAgregadosAsync(IEnumerable<string> jsonAgregados, CancellationToken ct);
     Task ActualizarEstadoAsync(string host, string tipo, IEnumerable<Lectura> lecturas, CancellationToken ct);
     Task<IReadOnlyList<(TiemposIncidente Tiempos, IReadOnlyList<string> Avisos)>> LeerIncidentesAbiertosAsync(CancellationToken ct);

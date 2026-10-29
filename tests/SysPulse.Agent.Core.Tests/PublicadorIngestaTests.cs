@@ -83,6 +83,6 @@ public class PublicadorIngestaTests
     public async Task ErrorDelServidor_LanzaExcepcion_ParaQueElMotorReintente()
     {
         using var p = new PublicadorIngesta("https://ejemplo.test", "k", new Falso(HttpStatusCode.InternalServerError));
-        await Assert.ThrowsAsync<HttpRequestException>(() => p.RegistrarHostAsync("and-0123456789", "android", "0.7.0", CancellationToken.None));
+        await Assert.ThrowsAsync<HttpRequestException>(() => p.RegistrarHostAsync("and-0123456789", "android", "0.7.0", "Lenovo Tab M11", CancellationToken.None));
     }
 }

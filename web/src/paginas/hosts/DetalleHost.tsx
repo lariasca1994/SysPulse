@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowLeft, CheckCircle2, Clock, Cpu, Power, RefreshCw } 
 import { hosts, type Host } from "../../api/hosts";
 import { useConsulta } from "../../api/useConsulta";
 import { Alerta } from "../../componentes/ui/Basicos";
-import { claseHost, describir, duracion, GRUPOS, hace, nivel, NOMBRE_CLASE } from "./metricas";
+import { describir, descripcionHost, duracion, GRUPOS, hace, nivel } from "./metricas";
 import { EtiquetaSalud, IconoHost, Medidor, PildoraConexion } from "./Piezas";
 import { Grafico } from "./Grafico";
 import { useAhora } from "./useAhora";
@@ -70,7 +70,7 @@ export default function DetalleHost() {
         <div className={d.identidad}>
           <h1 className={s.titulo}>{h.nombre}</h1>
           <p className={s.subtitulo}>
-            {NOMBRE_CLASE[claseHost(h)]}
+            {descripcionHost(h)}
           </p>
           <div className={d.chips}>
             <PildoraConexion conexion={h.conexion} />

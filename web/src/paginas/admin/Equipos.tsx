@@ -56,7 +56,7 @@ export function Equipos() {
           <tbody>
             {(lista.datos ?? []).map((e) => (
               <tr key={e.id} data-inactivo={e.retirado || undefined}>
-                <td><span className={s.equipo}><Icono e={e} /> <strong>{e.nombre}</strong></span><br /><span className={s.tenue}>{e.clase}</span></td>
+                <td><span className={s.equipo}><Icono e={e} /> <strong>{e.nombre}</strong></span><br /><span className={s.tenue}>{e.modelo ? `${e.modelo} · ${e.clase}` : e.clase}</span></td>
                 <td className="num">{e.versionAgente ? `v${e.versionAgente}` : "—"}</td>
                 <td className={s.tenue}>{fecha(e.ultimoReporte)}</td>
                 <td>

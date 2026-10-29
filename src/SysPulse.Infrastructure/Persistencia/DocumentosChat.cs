@@ -81,7 +81,7 @@ public sealed class AltaEquipoDoc
 
 /// <summary>
 /// Nombre visible y estado de cada host, fijado la primera vez que aparece ("Equipo portátil 2"): agregar equipos no
-/// cambia el nombre de los existentes. Nunca incluye fabricante ni modelo. Retirar = ocultar sin borrar el historial.
+/// cambia el nombre de los existentes. El modelo comercial se muestra aparte; el nombre nunca lo incluye. Retirar = ocultar sin borrar el historial.
 /// </summary>
 public sealed class HostAliasDoc
 {

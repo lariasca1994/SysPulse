@@ -107,6 +107,7 @@ public static class ConfiguracionAndroid
         {
             HostId = IdHost(),
             TipoHost = "android",
+            Modelo = ModeloComercial(),
             MongoUri = await SecureStorage.Default.GetAsync("MONGO_URI_ANDROID"),
             ApiUrl = await SecureStorage.Default.GetAsync("API_URL"),
             AgentApiKey = await SecureStorage.Default.GetAsync("AGENT_API_KEY"),
@@ -127,6 +128,51 @@ public static class ConfiguracionAndroid
     {
         get => Preferences.Default.Get(PreferenciaMonitoreoActivo, false);
         set => Preferences.Default.Set(PreferenciaMonitoreoActivo, value);
+    }
+
+    /// <summary>
+    /// Modelo comercial (p. ej. "Redmi Note 15 4G", "Lenovo Tab M11"). Se lee el nombre comercial que publica el
+    /// fabricante en las propiedades del sistema; si no existe, fabricante + modelo. Nunca el "nombre del dispositivo"
+    /// que pone el dueño en Ajustes, que puede contener su nombre.
+    /// </summary>
+    internal static string? ModeloComercial()
+    {
+        foreach (var propiedad in new[] { "ro.product.marketname", "ro.product.vendor.marketname", "ro.config.marketing_name", "ro.product.odm.marketname" })
+        {
+            var valor = Propiedad(propiedad);
+            if (!string.IsNullOrWhiteSpace(valor)) return Recortar(ConMarca(valor));
+        }
+        var modelo = global::Android.OS.Build.Model?.Trim();
+        return string.IsNullOrEmpty(modelo) ? null : Recortar(ConMarca(modelo));
+    }
+
+    private static string ConMarca(string modelo)
+    {
+        var fabricante = global::Android.OS.Build.Manufacturer?.Trim();
+        if (string.IsNullOrEmpty(fabricante) || modelo.StartsWith(fabricante, StringComparison.OrdinalIgnoreCase)) return modelo;
+        // Las submarcas ya identifican el equipo (Redmi, POCO, Galaxy): no se antepone el fabricante.
+        if (modelo.StartsWith("Redmi", StringComparison.OrdinalIgnoreCase) || modelo.StartsWith("POCO", StringComparison.OrdinalIgnoreCase)
+            || modelo.StartsWith("Galaxy", StringComparison.OrdinalIgnoreCase)) return modelo;
+        return $"{char.ToUpperInvariant(fabricante[0])}{fabricante[1..]} {modelo}";
+    }
+
+    private static string Recortar(string texto) => texto.Length <= 60 ? texto : texto[..60].TrimEnd();
+
+    /// <summary>Lee una propiedad pública del sistema con el comando getprop (sin APIs ocultas ni permisos).</summary>
+    private static string? Propiedad(string nombre)
+    {
+        try
+        {
+            using var proceso = Java.Lang.Runtime.GetRuntime()!.Exec(["getprop", nombre]);
+            using var lector = new Java.IO.BufferedReader(new Java.IO.InputStreamReader(proceso!.InputStream));
+            var linea = lector.ReadLine()?.Trim();
+            proceso.WaitFor();
+            return string.IsNullOrEmpty(linea) ? null : linea;
+        }
+        catch (Java.Lang.Exception)
+        {
+            return null;
+        }
     }
 
     /// <summary>Id anónimo: "and-" + hash del ANDROID_ID (único por app y dispositivo). Nunca el nombre del teléfono.</summary>

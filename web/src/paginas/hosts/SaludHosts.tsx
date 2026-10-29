@@ -7,7 +7,7 @@ import { useSesion } from "../../sesionContexto";
 import { puedeAgregarEquipos } from "../../api/admin";
 import { AltaEquipo } from "../admin/AltaEquipo";
 import { Alerta } from "../../componentes/ui/Basicos";
-import { describir, destacadas, duracion, hace, nivel, NOMBRE_CLASE, claseHost, type Clase } from "./metricas";
+import { describir, descripcionHost, destacadas, duracion, hace, nivel, claseHost, type Clase } from "./metricas";
 import { EtiquetaSalud, IconoHost, Medidor, PildoraConexion } from "./Piezas";
 import { useAhora } from "./useAhora";
 import s from "./hosts.module.css";
@@ -126,7 +126,7 @@ function Equipos({ lista, ahora }: { lista: Host[]; ahora: number }) {
   const visibles = lista
     .filter((h) => estado === "todos" || requiereAtencion(h))
     .filter((h) => tipo === "todos" || claseHost(h) === tipo)
-    .filter((h) => !texto || h.nombre.toLocaleLowerCase("es").includes(texto))
+    .filter((h) => !texto || `${h.nombre} ${h.modelo ?? ""}`.toLocaleLowerCase("es").includes(texto))
     .sort(ordenar);
 
   return (
@@ -134,7 +134,7 @@ function Equipos({ lista, ahora }: { lista: Host[]; ahora: number }) {
       <div className={s.barra}>
         <label className={s.buscador}>
           <Search size={16} aria-hidden="true" />
-          <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar equipo" aria-label="Buscar equipo por nombre" />
+          <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar por nombre o modelo" aria-label="Buscar equipo por nombre o modelo" />
         </label>
         <div className={s.filtros} role="group" aria-label="Filtrar por estado">
           <Chip activo={estado === "todos"} onClick={() => setEstado("todos")}>Todos <b className="num">{lista.length}</b></Chip>
@@ -232,7 +232,7 @@ function TablaEquipos({ lista, ahora }: { lista: Host[]; ahora: number }) {
                     <IconoHost host={h} size={16} />
                     <span>
                       <span className={s.tablaNombre}>{h.nombre}</span>
-                      <span className={s.tablaTipo}>{NOMBRE_CLASE[claseHost(h)]}</span>
+                      <span className={s.tablaTipo}>{descripcionHost(h)}</span>
                     </span>
                   </Link>
                 </th>
@@ -281,7 +281,7 @@ function TarjetaHost({ host, ahora }: { host: Host; ahora: number }) {
         <IconoHost host={host} />
         <div className={s.identidad}>
           <h3 className={s.nombre} title={host.nombre}>{host.nombre}</h3>
-          <p className={s.tipo}>{NOMBRE_CLASE[claseHost(host)]}</p>
+          <p className={s.tipo} title={descripcionHost(host)}>{descripcionHost(host)}</p>
         </div>
         <PildoraConexion conexion={host.conexion} />
       </div>

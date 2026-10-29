@@ -133,6 +133,12 @@ export function claseHost(h: Host): Clase {
   return h.lecturas.bateria_pct !== undefined ? "portatil" : "escritorio";
 }
 
+/** "Lenovo Tab M11 · Android" si el agente informa el modelo; si no, el tipo genérico ("Android · celular"). */
+export function descripcionHost(h: Host): string {
+  if (!h.modelo) return NOMBRE_CLASE[claseHost(h)];
+  return `${h.modelo} · ${h.tipo === "android" ? "Android" : "Windows"}`;
+}
+
 export const NOMBRE_CLASE: Record<Clase, string> = {
   escritorio: "Windows · escritorio",
   portatil: "Windows · portátil o tablet",

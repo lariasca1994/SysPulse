@@ -28,9 +28,9 @@ public sealed class PublicadorIngesta : IPublicador, IDisposable
     /// <summary>Los índices los mantienen la API y los agentes de Windows.</summary>
     public Task AsegurarIndicesAsync(CancellationToken ct) => Task.CompletedTask;
 
-    public async Task RegistrarHostAsync(string host, string tipo, string version, CancellationToken ct)
+    public async Task RegistrarHostAsync(string host, string tipo, string version, string? modelo, CancellationToken ct)
     {
-        using var r = await _http.PostAsJsonAsync("api/agente/host", new { host, tipo, version }, ct).ConfigureAwait(false);
+        using var r = await _http.PostAsJsonAsync("api/agente/host", new { host, tipo, version, modelo }, ct).ConfigureAwait(false);
         r.EnsureSuccessStatusCode();
     }
 

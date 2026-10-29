@@ -9,6 +9,12 @@ public sealed class OpcionesAgente
     public string HostId { get; set; } = "";
     public string TipoHost { get; set; } = "windows";
 
+    /// <summary>
+    /// Modelo comercial del equipo (p. ej. "Lenovo Tab M11", "HP ProDesk 400 G7") para identificar dónde está el agente.
+    /// Nunca el nombre que le dio el dueño, el usuario, el número de serie ni el IMEI.
+    /// </summary>
+    public string? Modelo { get; set; }
+
     public string? MongoUri { get; set; }
     public string? ApiUrl { get; set; }
     public string? AgentApiKey { get; set; }

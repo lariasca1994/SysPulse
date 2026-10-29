@@ -72,8 +72,9 @@ operaciones. Todo corre en capas gratuitas.
 - **Cuentas seguras:** registro propio, verificación de correo y de Telegram, contraseña robusta,
   MFA obligatorio (app autenticadora TOTP o código por correo, a elección, con códigos de
   recuperación), cambio y restablecimiento de contraseña.
-- **Equipos sin fricción:** alta con un código de un solo uso, nombres genéricos (nunca el modelo ni
-  el nombre del equipo) y actualización automática de los agentes con verificación de huella.
+- **Equipos sin fricción:** alta con un código de un solo uso, nombre genérico más el modelo comercial
+  para saber dónde está cada agente (nunca el nombre que le dio el dueño) y actualización automática de
+  los agentes con verificación de huella.
 - **PWA instalable** con tema claro y oscuro.
 
 ### Stack
@@ -166,20 +167,20 @@ igual no se repite durante 30 minutos.
 
 ### Datos que captura
 
-Los agentes envían **solo métricas técnicas de salud**, sin datos sensibles ni información personal de
-los equipos agregados:
+Los agentes envían **solo métricas técnicas de salud** y el modelo comercial del equipo, sin datos
+sensibles ni información personal de los equipos agregados:
 
 | Se captura | No se captura nunca |
 |---|---|
 | Identificador anónimo del equipo (`win-` / `and-` + huella de 10 caracteres) | Nombre del equipo, usuario de Windows o cuenta del celular |
-| Tipo de equipo (Windows o Android) y versión del agente | Marca, modelo, número de serie o IMEI |
+| Tipo de equipo (Windows o Android), versión del agente y **modelo comercial** (p. ej. “Lenovo Tab M11”, “HP ProDesk 400 G7”, “PC armado · placa …”) | Nombre que el dueño le puso al equipo, número de serie o IMEI |
 | Uso de CPU, memoria, paginación y disco (promedio, mínimo, máximo y percentil 95 por ventana) | Archivos, documentos, fotos, contactos o mensajes |
 | Red: tráfico y consumo por tipo de conexión (Wi-Fi, cable UTP y datos móviles), errores, latencia y pérdida hacia DNS públicos, intensidad de señal y cantidad de puertos en escucha | Direcciones IP, ubicación, nombre de la red Wi-Fi o aplicaciones instaladas |
 | Almacenamiento libre y, en celulares, batería (nivel, carga, salud, temperatura y voltaje) | Contenido del almacenamiento o datos de las aplicaciones |
 | Eventos de alerta cuando una métrica supera un umbral | Historial de navegación o pulsaciones de teclado |
 
 En la plataforma cada equipo aparece con un nombre genérico (“Equipo portátil 2”, “Celular 1”) que
-asigna el sistema.
+asigna el sistema, acompañado de su modelo comercial para ubicarlo.
 
 ### Seguridad y estado
 
@@ -190,8 +191,8 @@ asigna el sistema.
   al cambiar contraseña, rol o MFA, y auditoría de solo inserción.
 - **Roles:** N1, N2 y N3 los elige cada persona al registrarse; el rol **gestor** se solicita y solo
   lo aprueba el **admin**. Nadie borra datos: el admin solo desactiva o retira.
-- **Privacidad:** la plataforma nunca muestra el nombre, la marca ni el modelo de los equipos; solo
-  nombres genéricos (“Equipo portátil 2”, “Celular 1”).
+- **Privacidad:** cada equipo se muestra con un nombre genérico (“Equipo portátil 2”, “Celular 1”) y su
+  modelo comercial; nunca el nombre que le dio el dueño, el usuario, el número de serie, el IMEI ni la IP.
 - **Instaladores públicos sin secretos:** el equipo recibe su configuración al canjear un código de un
   solo uso (24 h; solo se guarda su huella) y la guarda cifrada (DPAPI en Windows, Android Keystore).
   Antes de cada publicación, `tools/escanear-secretos.ps1` revisa que los paquetes no contengan

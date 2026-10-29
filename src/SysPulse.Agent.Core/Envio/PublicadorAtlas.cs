@@ -49,13 +49,16 @@ public sealed class PublicadorAtlas : IPublicador
         _indicesListos = true;
     }
 
-    /// <summary>Registra el host sin nombre ni modelo (privacidad): la plataforma le asigna un nombre genérico.</summary>
-    public async Task RegistrarHostAsync(string host, string tipo, string version, CancellationToken ct)
+    /// <summary>
+    /// Registra el host con su modelo comercial, nunca con el nombre del equipo (la plataforma le asigna uno genérico).
+    /// </summary>
+    public async Task RegistrarHostAsync(string host, string tipo, string version, string? modelo, CancellationToken ct)
     {
         var doc = new BsonDocument
         {
             { "_id", host }, { "tipo", tipo }, { "version_agente", version }, { "ultimo_arranque", DateTime.UtcNow },
         };
+        if (!string.IsNullOrWhiteSpace(modelo)) doc["modelo"] = modelo.Trim();
         await _hosts.ReplaceOneAsync(Builders<BsonDocument>.Filter.Eq("_id", host), doc, new ReplaceOptions { IsUpsert = true }, ct).ConfigureAwait(false);
     }
 

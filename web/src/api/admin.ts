@@ -67,6 +67,7 @@ export interface Equipo {
   clase: string;
   tipo: "windows" | "android" | string;
   versionAgente: string | null;
+  modelo: string | null;
   ultimoReporte: string | null;
   conexion: "en-linea" | "retrasado" | "sin-reporte";
   retirado: boolean;

@@ -12,8 +12,9 @@ builder.Services.AddWindowsService(options => options.ServiceName = "SysPulseAge
 var opciones = new OpcionesAgente();
 builder.Configuration.GetSection("Agente").Bind(opciones);
 
-// Privacidad: nunca el nombre del equipo ni su modelo; solo un id anónimo estable.
+// Privacidad: nunca el nombre del equipo, el usuario ni el número de serie; id anónimo estable y modelo comercial.
 if (string.IsNullOrWhiteSpace(opciones.HostId)) opciones.HostId = IdentidadEquipo.Id();
+opciones.Modelo ??= IdentidadEquipo.Modelo();
 // El agente de Windows vigila el SLA de los incidentes abiertos (sección 11): solo despierta a la API en los cruces.
 opciones.VigilarSla = true;
 
