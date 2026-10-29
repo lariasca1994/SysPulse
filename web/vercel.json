@@ -4,7 +4,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/((?!assets/|icons/|sw\\.js|manifest\\.webmanifest|offline\\.html).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|assets/|icons/|sw\\.js|manifest\\.webmanifest|offline\\.html).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

@@ -2,45 +2,30 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using MongoDB.Bson;
-using MongoDB.Driver;
-using SysPulse.Agent.Core.Configuracion;
 
 namespace SysPulse.Agent.Android;
 
 /// <summary>
-/// Prueba técnica (sección 5): DNS, TCP, ping y conexión a Atlas con la cadena estándar.
-/// La cadena llega una sola vez en un archivo temporal (adb push), se valida, se guarda cifrada
-/// en SecureStorage y el archivo se borra. Las ejecuciones siguientes usan la cadena guardada.
-/// Solo lee (comando ping); no escribe en la base.
+/// Prueba técnica: DNS, TCP, ping y conexión HTTPS con la ruta de ingesta de SysPulse (la misma que usa el agente).
+/// No abre conexiones a la base de datos: en Android esas conexiones usan una implementación TLS que puede cerrar
+/// la app. Solo lee la configuración; no escribe nada.
 /// </summary>
 public static class PruebaTecnica
 {
-    private const string ClaveCadena = "MONGO_URI_ANDROID";
-
     public sealed record Resultado(string Prueba, bool Ok, string Detalle);
 
     public static async Task<IReadOnlyList<Resultado>> EjecutarAsync()
     {
         var resultados = new List<Resultado>();
-        var cadena = await ObtenerCadenaAsync(resultados);
-        var host = cadena is null ? null : MongoUrl.Create(cadena).Servers.First().Host;
+        var importacion = await ConfiguracionAndroid.ImportarSiExisteAsync();
+        if (importacion is not null) resultados.Add(new("Importación", !importacion.StartsWith("Configuración rechazada", StringComparison.Ordinal), importacion));
 
-        if (host is not null)
+        var url = new Uri(ConfiguracionAndroid.IngestaUrl);
+        resultados.Add(await MedirAsync($"DNS ({url.Host})", async () =>
         {
-            resultados.Add(await MedirAsync("DNS (servidor de Atlas)", async () =>
-            {
-                var ips = await Dns.GetHostAddressesAsync(host);
-                return $"{ips.Length} IP";
-            }));
-
-            resultados.Add(await MedirAsync("TCP 27017 (Atlas)", async () =>
-            {
-                using var cliente = new TcpClient();
-                await cliente.ConnectAsync(host, 27017).WaitAsync(TimeSpan.FromSeconds(10));
-                return "conectado";
-            }));
-        }
+            var ips = await Dns.GetHostAddressesAsync(url.Host);
+            return $"{ips.Length} IP";
+        }));
 
         resultados.Add(await MedirAsync("TCP 443 (1.1.1.1)", async () =>
         {
@@ -51,39 +36,23 @@ public static class PruebaTecnica
 
         resultados.Add(await PingAsync("8.8.8.8"));
 
-        if (cadena is not null)
+        var clave = await SecureStorage.Default.GetAsync("AGENT_API_KEY");
+        if (string.IsNullOrWhiteSpace(clave))
         {
-            resultados.Add(await MedirAsync("MongoDB (Atlas)", () => PingMongoAsync(cadena)));
+            resultados.Add(new("SysPulse", false, "el equipo no está vinculado (usa un código de alta)"));
+        }
+        else
+        {
+            resultados.Add(await MedirAsync("SysPulse (HTTPS)", async () =>
+            {
+                using var http = new HttpClient { BaseAddress = url, Timeout = TimeSpan.FromSeconds(20) };
+                http.DefaultRequestHeaders.Add("X-Agent-Key", clave);
+                using var r = await http.GetAsync("api/agente/configuracion");
+                return r.IsSuccessStatusCode ? "configuración recibida" : throw new HttpRequestException($"respuesta {(int)r.StatusCode}");
+            }));
         }
 
         return resultados;
-    }
-
-    private static async Task<string?> ObtenerCadenaAsync(List<Resultado> resultados)
-    {
-        var importacion = await ConfiguracionAndroid.ImportarSiExisteAsync();
-        if (importacion is not null) resultados.Add(new("Importación", !importacion.StartsWith("Configuración rechazada", StringComparison.Ordinal), importacion));
-
-        var guardada = await SecureStorage.Default.GetAsync(ClaveCadena);
-        if (guardada is null)
-        {
-            resultados.Add(new("Configuración", false, "falta configurar la conexión a Atlas"));
-            return null;
-        }
-
-        resultados.Add(new("Configuración", true, "usando la cadena guardada"));
-        return guardada;
-    }
-
-    private static async Task<string> PingMongoAsync(string cadena)
-    {
-        var ajustes = MongoClientSettings.FromConnectionString(cadena);
-        ajustes.ServerSelectionTimeout = TimeSpan.FromSeconds(15);
-        ajustes.ConnectTimeout = TimeSpan.FromSeconds(15);
-        using var cliente = new MongoClient(ajustes);
-        var db = cliente.GetDatabase(MongoUrl.Create(cadena).DatabaseName ?? "admin");
-        await db.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1));
-        return "ping ok";
     }
 
     private static async Task<Resultado> PingAsync(string destino)

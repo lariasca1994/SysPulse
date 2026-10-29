@@ -110,10 +110,17 @@ public static class ConfiguracionAndroid
             MongoUri = await SecureStorage.Default.GetAsync("MONGO_URI_ANDROID"),
             ApiUrl = await SecureStorage.Default.GetAsync("API_URL"),
             AgentApiKey = await SecureStorage.Default.GetAsync("AGENT_API_KEY"),
+            // Envío por HTTPS (pila de red de Java) en lugar de conectarse directo a Atlas: las conexiones TLS
+            // nativas de .NET en Android pueden cerrar la app al cambiar o perder la red.
+            IngestaUrl = IngestaUrl,
+            IntervaloEstado = TimeSpan.FromMinutes(2),
             CarpetaDatos = FileSystem.AppDataDirectory,
             Umbrales = UmbralesPorDefecto.Android,
         };
     }
+
+    /// <summary>Ruta de ingesta de los agentes (dirección pública de la web de SysPulse; no es un secreto).</summary>
+    public const string IngestaUrl = "https://syspulse.vercel.app/";
 
     /// <summary>Recordar si el usuario dejó el monitoreo encendido (para reanudarlo al reiniciar el teléfono).</summary>
     public static bool MonitoreoActivo

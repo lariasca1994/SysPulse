@@ -12,6 +12,15 @@ public sealed class OpcionesAgente
     public string? MongoUri { get; set; }
     public string? ApiUrl { get; set; }
     public string? AgentApiKey { get; set; }
+
+    /// <summary>
+    /// Si se indica (Android), los datos van por HTTPS a esta ruta de ingesta en lugar de conectarse directo a Atlas.
+    /// Requiere <see cref="AgentApiKey"/>.
+    /// </summary>
+    public string? IngestaUrl { get; set; }
+
+    /// <summary>Cada cuánto se publica el estado actual (cero: en cada lectura). El panel marca "en línea" hasta 3 minutos.</summary>
+    public TimeSpan IntervaloEstado { get; set; } = TimeSpan.Zero;
     /// <summary>Vigilar el SLA de los incidentes abiertos en Atlas y avisar a la API los cruces del 75 % y 100 % (solo Windows).</summary>
     public bool VigilarSla { get; set; }
 

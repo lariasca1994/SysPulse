@@ -15,7 +15,7 @@ public sealed record DocumentoAgregado(string Host, string TipoHost, DateTimeOff
 /// Colecciones: metricas_5m (TTL 90 días), estado_actual (1 documento por host) y hosts.
 /// Los nombres de métrica se guardan con '_' en vez de '.' para que sean campos consultables.
 /// </summary>
-public sealed class PublicadorAtlas
+public sealed class PublicadorAtlas : IPublicador
 {
     private static readonly TimeSpan Ttl = TimeSpan.FromDays(90);
 

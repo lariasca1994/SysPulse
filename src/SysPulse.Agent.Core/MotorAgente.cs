@@ -27,7 +27,9 @@ public sealed partial class MotorAgente(
     BufferLocal buffer,
     ILogger<MotorAgente> logger)
 {
-    private PublicadorAtlas? _atlas;
+    private IPublicador? _atlas;
+    private readonly Dictionary<string, Lectura> _estadoPendiente = new(StringComparer.Ordinal);
+    private DateTimeOffset _ultimoEstado = DateTimeOffset.MinValue;
     private EvaluadorAlertas _evaluador = null!;
     private DateTimeOffset _ventanaActual;
     private DateTimeOffset _ultimoEnvio = DateTimeOffset.MinValue;
@@ -58,9 +60,17 @@ public sealed partial class MotorAgente(
         // Última configuración central conocida: permite arrancar con ella aunque no haya internet.
         if (ConfiguracionCentral.LeerCopia(RutaCopiaConfig) is { } copia) AplicarConfiguracion(copia, "copia local");
 
-        if (!string.IsNullOrWhiteSpace(opciones.MongoUri))
+        if (!string.IsNullOrWhiteSpace(opciones.IngestaUrl) && !string.IsNullOrWhiteSpace(opciones.AgentApiKey))
+        {
+            _atlas = new PublicadorIngesta(opciones.IngestaUrl, opciones.AgentApiKey);
+        }
+        else if (!string.IsNullOrWhiteSpace(opciones.MongoUri))
         {
             _atlas = new PublicadorAtlas(opciones.MongoUri);
+        }
+
+        if (_atlas is not null)
+        {
             await IntentarAsync("registrar host en Atlas", async () =>
             {
                 await _atlas.AsegurarIndicesAsync(ct).ConfigureAwait(false);
@@ -119,7 +129,17 @@ public sealed partial class MotorAgente(
         DateTimeOffset? enviado = null;
         if (_atlas is not null)
         {
-            await IntentarAsync("actualizar estado_actual", () => _atlas.ActualizarEstadoAsync(opciones.HostId, opciones.TipoHost, lecturas, ct)).ConfigureAwait(false);
+            // Se acumula el último valor de cada métrica entre publicaciones (así no se pierden, p. ej., los chequeos de red).
+            foreach (var l in lecturas) _estadoPendiente[l.Metrica] = l;
+            if (DateTimeOffset.UtcNow - _ultimoEstado >= opciones.IntervaloEstado)
+            {
+                var estado = _estadoPendiente.Values.ToList();
+                if (await IntentarAsync("actualizar estado_actual", () => _atlas.ActualizarEstadoAsync(opciones.HostId, opciones.TipoHost, estado, ct)).ConfigureAwait(false))
+                {
+                    _estadoPendiente.Clear();
+                    _ultimoEstado = DateTimeOffset.UtcNow;
+                }
+            }
 
             if (DateTimeOffset.UtcNow - _ultimoEnvio >= opciones.IntervaloEnvioLotes)
             {
