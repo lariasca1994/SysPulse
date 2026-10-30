@@ -240,6 +240,7 @@ internal static class Instalacion
         // Sin esta marca, Windows no aplica el reinicio cuando el servicio se detiene con código de error
         // (lo que hace al reemplazarse a sí mismo): quedaba detenido hasta el próximo reinicio del equipo.
         Sc($"failureflag {nombre} 1");
+        PermitirInicioAlAgente();
         BorrarTareaAntigua();
         Sc($"start {nombre}");
         Console.WriteLine("   servicio listo: " + nombre);
@@ -376,7 +377,36 @@ internal static class Instalacion
         return 1;
     }
 
-    public static void ActivarReinicioActualizador() => Sc($"failureflag {ServicioActualizador.Nombre} 1");
+    public static void ActivarReinicioActualizador()
+    {
+        Sc($"failureflag {ServicioActualizador.Nombre} 1");
+        PermitirInicioAlAgente();
+    }
+
+    /// <summary>
+    /// La cuenta del agente (NT SERVICE\SysPulseAgent) puede consultar e iniciar el servicio actualizador, y nada más
+    /// (ni detenerlo, ni cambiar su configuración): así el agente lo vuelve a iniciar si quedó detenido.
+    /// </summary>
+    private static void PermitirInicioAlAgente()
+    {
+        try
+        {
+            var sid = new NTAccount(Cuenta).Translate(typeof(SecurityIdentifier)).Value;
+            var nombre = ServicioActualizador.Nombre;
+            var (codigo, salida) = Ejecutar("sc.exe", $"sdshow {nombre}");
+            var sddl = salida.Trim();
+            if (codigo != 0 || !sddl.StartsWith("D:", StringComparison.Ordinal) || sddl.Contains(sid, StringComparison.OrdinalIgnoreCase)) return;
+            // CC = leer configuración, LC = consultar estado, RP = iniciar, LO = interrogar. Va al final de la DACL (antes de la SACL "S:").
+            var ace = $"(A;;CCLCRPLO;;;{sid})";
+            var s = sddl.IndexOf("S:", StringComparison.Ordinal);
+            var nuevo = s < 0 ? sddl + ace : sddl[..s] + ace + sddl[s..];
+            Ejecutar("sc.exe", ["sdset", nombre, nuevo]);
+        }
+        catch (IdentityNotMappedException)
+        {
+            // El servicio del agente aún no existe: se configura en la próxima instalación o arranque del actualizador.
+        }
+    }
 
     /// <summary>Lanza "reiniciar-actualizador" con el ejecutable nuevo, como proceso aparte que sobrevive al servicio.</summary>
     public static void ProgramarReinicioActualizador(string ejecutable)

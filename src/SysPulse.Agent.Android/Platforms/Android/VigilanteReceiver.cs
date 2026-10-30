@@ -8,8 +8,9 @@ namespace SysPulse.Agent.Android;
 /// <summary>
 /// Vigilante del monitoreo: una alarma cada 15 minutos (también con el teléfono en reposo) revisa que el servicio
 /// siga vivo y midiendo. Si el sistema lo cerró (ahorro de batería de Xiaomi/HyperOS, falta de memoria, la app
-/// quitada de Recientes) lo vuelve a iniciar; si sigue vivo pero el motor dejó de medir, reinicia la app.
-/// La alarma exacta permite iniciar el servicio en primer plano desde segundo plano (Android 12+).
+/// quitada de Recientes) lo vuelve a iniciar; si sigue vivo pero el motor dejó de medir, reinicia el motor.
+/// Usa una alarma normal (no exacta), sin permisos especiales. Si Android no deja reabrir el servicio desde segundo
+/// plano (sin "Sin restricciones" de batería), muestra una notificación para reanudarlo con un toque.
 /// </summary>
 [Register("dev.syspulse.agent.VigilanteReceiver")]
 public sealed class VigilanteReceiver : BroadcastReceiver
@@ -28,12 +29,11 @@ public sealed class VigilanteReceiver : BroadcastReceiver
         Programar(context, Intervalo);
         if (ServicioMonitoreo.Detenido)
         {
-            // Proceso vivo pero motor sin medir: se reinicia la app entera (la alarma corta la vuelve a abrir).
-            Programar(context, TimeSpan.FromSeconds(5));
-            global::Android.OS.Process.KillProcess(global::Android.OS.Process.MyPid());
+            // Servicio vivo pero motor sin medir: se reinicia el motor dentro del mismo servicio.
+            ServicioMonitoreo.ReiniciarMotor();
             return;
         }
-        ServicioMonitoreo.IniciarSeguro(context);
+        if (ServicioMonitoreo.Motor is null) ServicioMonitoreo.IniciarSeguro(context);
     }
 
     /// <summary>Programa (o reprograma) la próxima revisión. Una sola alarma: la nueva reemplaza a la anterior.</summary>
@@ -44,14 +44,7 @@ public sealed class VigilanteReceiver : BroadcastReceiver
         var pendiente = PendingIntent.GetBroadcast(contexto, 0, intento, PendingIntentFlags.Immutable | PendingIntentFlags.UpdateCurrent);
         if (pendiente is null) return;
         var cuando = Java.Lang.JavaSystem.CurrentTimeMillis() + (long)(dentroDe ?? Intervalo).TotalMilliseconds;
-        if (!OperatingSystem.IsAndroidVersionAtLeast(31) || alarmas.CanScheduleExactAlarms())
-        {
-            alarmas.SetExactAndAllowWhileIdle(AlarmType.RtcWakeup, cuando, pendiente);
-        }
-        else
-        {
-            alarmas.SetAndAllowWhileIdle(AlarmType.RtcWakeup, cuando, pendiente);
-        }
+        alarmas.SetAndAllowWhileIdle(AlarmType.RtcWakeup, cuando, pendiente);
     }
 
     public static void Cancelar(Context contexto)

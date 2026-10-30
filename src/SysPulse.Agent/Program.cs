@@ -52,6 +52,8 @@ builder.Services.AddSingleton<ICollector, RedCollector>();
 builder.Services.AddSingleton<ICollector, SistemaCollector>();
 builder.Services.AddSingleton<SysPulse.Agent.Core.MotorAgente>();
 builder.Services.AddHostedService<Worker>();
+// Actualización forzada: si el servicio actualizador quedó detenido, el agente lo vuelve a iniciar.
+if (OperatingSystem.IsWindows()) builder.Services.AddHostedService<VigilanteActualizador>();
 
 var host = builder.Build();
 Log.Information("Secretos desde {Origen}", secretosCifrados ? "agent.json (DPAPI)" : archivoEnv is null ? "variables de entorno" : ".env de desarrollo");

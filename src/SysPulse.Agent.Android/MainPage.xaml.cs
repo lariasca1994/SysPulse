@@ -25,9 +25,6 @@ public partial class MainPage : ContentPage
 
 		VincularPanel.IsVisible = !await ConfiguracionAndroid.EstaConfiguradoAsync();
 
-		// Actualización obligatoria pendiente de confirmación: se muestra apenas se abre la app.
-		ActualizadorAndroid.MostrarConfirmacionSiHay(Platform.CurrentActivity ?? AndroidApp.Context);
-
 		_refresco = Dispatcher.CreateTimer();
 		_refresco.Interval = TimeSpan.FromSeconds(2);
 		_refresco.Tick += (_, _) => Refrescar();
@@ -43,6 +40,10 @@ public partial class MainPage : ContentPage
 
 	private void Refrescar()
 	{
+		var pendiente = ActualizadorAndroid.Pendiente;
+		ActualizacionPanel.IsVisible = pendiente is not null;
+		if (pendiente is { } p) ActualizacionLabel.Text = $"Actualización obligatoria disponible: versión {p.Version}";
+
 		var motor = ServicioMonitoreo.Motor;
 		var activo = motor is not null;
 		EstadoLabel.Text = activo ? "Estado: monitoreando" : "Estado: detenido";
@@ -110,6 +111,8 @@ public partial class MainPage : ContentPage
 		var intento = new Intent().SetComponent(new ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"));
 		if (!Abrir(intento)) OnAjustesAppClicked(sender, e);
 	}
+
+	private void OnDescargarClicked(object? sender, EventArgs e) => ActualizadorAndroid.AbrirDescarga(AndroidApp.Context);
 
 	private void OnBateriaClicked(object? sender, EventArgs e)
 	{

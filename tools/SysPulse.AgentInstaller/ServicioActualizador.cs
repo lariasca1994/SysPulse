@@ -14,7 +14,8 @@ internal sealed class ServicioActualizador(IHostApplicationLifetime vida) : Back
 {
     public const string Nombre = "SysPulseActualizador";
     private static readonly TimeSpan EsperaInicial = TimeSpan.FromMinutes(5);
-    private static readonly TimeSpan Intervalo = TimeSpan.FromHours(1);
+    // Actualización forzada: una versión publicada llega a todos los equipos encendidos en menos de 15 minutos.
+    private static readonly TimeSpan Intervalo = TimeSpan.FromMinutes(15);
 
     public static async Task<int> EjecutarAsync(string[] args)
     {

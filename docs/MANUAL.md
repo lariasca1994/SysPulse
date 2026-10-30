@@ -276,10 +276,17 @@ SLA por prioridad:
 4. En menos de un minuto el equipo aparece en **Salud de hosts** con un nombre genérico y su modelo
    comercial.
 
-**Actualizaciones:** son automáticas y obligatorias. En Windows las instala el servicio "SysPulse
-Actualizador" cada hora. En Android la app se actualiza sola; si el teléfono pide confirmación (la
-primera vez), deja una notificación fija **"Actualización obligatoria de SysPulse"**: tócala e
-instala. La app envía los datos por HTTPS, así que perder la señal o pasar de Wi-Fi a datos móviles
+**Actualizaciones:** son obligatorias.
+
+- **Windows:** forzadas. El servicio "SysPulse Actualizador" revisa cada 15 minutos e instala la
+  versión nueva solo; si se detuvo, el agente lo vuelve a iniciar.
+- **Android:** aparece una notificación fija **"Actualización obligatoria de SysPulse"** y un aviso
+  en la app. Tócala: se abre la descarga oficial y Android te pide confirmar la instalación. La app
+  no instala nada por su cuenta, para que Google Play Protect no la marque como riesgosa.
+
+**Google Play Protect:** el agente Android está firmado con la llave propia de SysPulse. Si al
+instalarlo Play Protect muestra "app no reconocida", elige **Más detalles → Instalar de todas
+formas**: pasa porque la app no se distribuye por Google Play. La app envía los datos por HTTPS, así que perder la señal o pasar de Wi-Fi a datos móviles
 no la cierra: lo que no pudo enviar lo guarda y lo reenvía después.
 
 **Si el sistema cierra la app:** algunos teléfonos (por ejemplo Xiaomi y Redmi con su ahorro de

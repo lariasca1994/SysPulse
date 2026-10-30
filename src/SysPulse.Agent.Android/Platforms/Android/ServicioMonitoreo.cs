@@ -55,21 +55,61 @@ public sealed partial class ServicioMonitoreo : Service
         contexto.StartForegroundService(intento);
     }
 
-    /// <summary>Inicio desde segundo plano (vigilante, arranque): si Android no lo permite en ese momento, lo reintenta la próxima alarma.</summary>
+    private const string CanalAviso = "syspulse_monitoreo_detenido";
+    private const int IdAviso = 1003;
+    private static ServicioMonitoreo? _instancia;
+
+    /// <summary>
+    /// Inicio desde segundo plano (vigilante, arranque). Si Android no lo permite (la app no tiene "Sin restricciones"
+    /// de batería), queda una notificación para reanudar el monitoreo con un toque; el vigilante vuelve a intentar.
+    /// </summary>
     public static void IniciarSeguro(Context contexto)
     {
         try
         {
             Iniciar(contexto);
+            (contexto.GetSystemService(NotificationService) as NotificationManager)?.Cancel(IdAviso);
         }
         catch (Java.Lang.Exception)
         {
-            // ForegroundServiceStartNotAllowedException u otra restricción del sistema: el vigilante vuelve a intentar.
+            AvisarDetenido(contexto);
         }
         catch (InvalidOperationException)
         {
-            // Ídem.
+            AvisarDetenido(contexto);
         }
+    }
+
+    private static void AvisarDetenido(Context contexto)
+    {
+        if (contexto.GetSystemService(NotificationService) is not NotificationManager gestor) return;
+        using (var canal = new NotificationChannel(CanalAviso, "Monitoreo detenido", NotificationImportance.High)
+        {
+            Description = "Aviso cuando el sistema cerró el monitoreo de SysPulse",
+        })
+        {
+            gestor.CreateNotificationChannel(canal);
+        }
+        var abrir = PendingIntent.GetActivity(contexto, IdAviso, new Intent(contexto, typeof(MainActivity)).AddFlags(ActivityFlags.NewTask),
+            PendingIntentFlags.Immutable | PendingIntentFlags.UpdateCurrent);
+        gestor.Notify(IdAviso, new Notification.Builder(contexto, CanalAviso)
+            .SetContentTitle("SysPulse se detuvo")
+            .SetContentText("El sistema cerró el monitoreo. Toca para reanudarlo.")
+            .SetSmallIcon(Resource.Mipmap.appicon)
+            .SetContentIntent(abrir)
+            .SetAutoCancel(true)
+            .Build());
+    }
+
+    /// <summary>El motor dejó de medir sin caerse (colgado): se cancela y arranca uno nuevo en el mismo servicio.</summary>
+    public static void ReiniciarMotor()
+    {
+        if (_instancia is not { } s) return;
+        s._cancelacion?.Cancel();
+        s._cancelacion?.Dispose();
+        s._cancelacion = new CancellationTokenSource();
+        var token = s._cancelacion.Token;
+        _ = Task.Run(() => s.CorrerAsync(token));
     }
 
     public static void Detener(Context contexto)
@@ -109,7 +149,9 @@ public sealed partial class ServicioMonitoreo : Service
         }
 
         // Vigilante: aunque el sistema cierre la app, una alarma la vuelve a abrir.
+        _instancia = this;
         VigilanteReceiver.Programar(this);
+        (GetSystemService(NotificationService) as NotificationManager)?.Cancel(IdAviso);
 
         if (_cancelacion is null)
         {
@@ -181,6 +223,7 @@ public sealed partial class ServicioMonitoreo : Service
 
     public override void OnDestroy()
     {
+        if (ReferenceEquals(_instancia, this)) _instancia = null;
         _cancelacion?.Cancel();
         _cancelacion?.Dispose();
         _cancelacion = null;

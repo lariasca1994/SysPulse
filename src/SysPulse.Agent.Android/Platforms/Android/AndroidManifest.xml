@@ -8,12 +8,6 @@
 			          android:value="Monitoreo continuo del propio dispositivo (batería, temperatura, memoria, red) para la plataforma SysPulse" />
 		</service>
 
-		<!-- Entrega del APK descargado al instalador de Android (permiso temporal de lectura, sin exponer archivos). -->
-		<provider android:name="androidx.core.content.FileProvider" android:authorities="dev.syspulse.agent.archivos"
-		          android:exported="false" android:grantUriPermissions="true">
-			<meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/rutas_archivos" />
-		</provider>
-
 		<!-- Reanudar el monitoreo al encender el teléfono o actualizar la app. -->
 		<receiver android:name="dev.syspulse.agent.ArranqueReceiver" android:exported="true">
 			<intent-filter>
@@ -22,7 +16,7 @@
 			</intent-filter>
 		</receiver>
 
-		<!-- Vigilante: alarma cada 15 min que vuelve a iniciar el monitoreo si el sistema lo cerró o se detuvo. -->
+		<!-- Vigilante: alarma cada 15 min (no exacta, sin permisos especiales) que vuelve a iniciar el monitoreo. -->
 		<receiver android:name="dev.syspulse.agent.VigilanteReceiver" android:exported="false" />
 	</application>
 
@@ -33,11 +27,8 @@
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 	<uses-permission android:name="android.permission.WAKE_LOCK" />
-	<!-- Alarma exacta del vigilante: permite volver a iniciar el servicio en primer plano desde segundo plano.
-	     USE_EXACT_ALARM se concede al instalar (Android 13+); en Android 12 se usa SCHEDULE_EXACT_ALARM. -->
-	<uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-	<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+	<!-- Excepción de ahorro de batería: el monitoreo sigue con la pantalla apagada y el vigilante puede reabrirlo. -->
 	<uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-	<!-- Actualizaciones: Android pide confirmación en cada instalación (la primera vez, permitir "instalar apps desconocidas"). -->
-	<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+	<!-- Sin REQUEST_INSTALL_PACKAGES ni USE_EXACT_ALARM: Play Protect los trata como señales de app peligrosa (una app
+	     que instala otras). Las actualizaciones se descargan desde el navegador y las instala Android. -->
 </manifest>

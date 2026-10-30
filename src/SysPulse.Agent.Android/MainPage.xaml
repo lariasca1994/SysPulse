@@ -9,12 +9,21 @@
             <Label Text="SysPulse Agent" Style="{StaticResource Headline}" SemanticProperties.HeadingLevel="Level1" />
             <Label Text="Sonda móvil: batería, temperatura, memoria, almacenamiento y red." Style="{StaticResource SubHeadline}" />
 
+            <!-- Actualización obligatoria: la descarga se abre en el navegador y la instala Android. -->
+            <Border x:Name="ActualizacionPanel" Padding="16" StrokeShape="RoundRectangle 8" Stroke="#E1251B" IsVisible="False">
+                <VerticalStackLayout Spacing="8">
+                    <Label x:Name="ActualizacionLabel" Text="Actualización obligatoria disponible" FontAttributes="Bold" TextColor="#E1251B" />
+                    <Label Text="Descárgala e instálala para seguir enviando datos a SysPulse. Android te pedirá confirmar la instalación." FontSize="13" />
+                    <Button Text="Descargar actualización" Clicked="OnDescargarClicked" />
+                </VerticalStackLayout>
+            </Border>
+
             <Border Padding="16" StrokeShape="RoundRectangle 8">
                 <VerticalStackLayout Spacing="6">
                     <Label x:Name="EstadoLabel" Text="Estado: —" FontAttributes="Bold" />
                     <Label x:Name="HostLabel" Text="Host: —" />
                     <Label x:Name="CicloLabel" Text="Último ciclo: —" />
-                    <Label x:Name="EnvioLabel" Text="Último envío a Atlas: —" />
+                    <Label x:Name="EnvioLabel" Text="Último envío a SysPulse: —" />
                     <Label x:Name="BufferLabel" Text="Buffer: —" FontFamily="monospace" FontSize="12" />
                     <Label x:Name="ErrorLabel" Text="" TextColor="#C8231A" />
                 </VerticalStackLayout>

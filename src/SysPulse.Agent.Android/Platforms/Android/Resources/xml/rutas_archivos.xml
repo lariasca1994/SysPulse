@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Solo la carpeta de actualizaciones en la caché de la app se comparte con el instalador. -->
-<paths>
-	<cache-path name="actualizaciones" path="actualizaciones/" />
-</paths>
