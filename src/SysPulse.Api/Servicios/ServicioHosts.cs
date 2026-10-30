@@ -261,8 +261,20 @@ public sealed partial class ServicioHosts(ContextoMongo mongo, TimeProvider relo
     internal static string? ModeloSeguro(string? modelo)
     {
         var limpio = modelo?.Trim();
-        return limpio is { Length: > 0 and <= 60 } && ModeloValido().IsMatch(limpio) ? limpio : null;
+        if (limpio is not { Length: > 0 and <= 60 } || !ModeloValido().IsMatch(limpio)) return null;
+        // Algunos equipos solo entregan el código de fábrica: se muestra su nombre comercial.
+        var codigo = limpio.Split(' ', StringSplitOptions.RemoveEmptyEntries)[^1];
+        return NombresComerciales.TryGetValue(codigo, out var comercial) ? comercial : limpio;
     }
+
+    /// <summary>Códigos de fábrica → nombre comercial, para equipos que no publican su nombre de venta.</summary>
+    private static readonly Dictionary<string, string> NombresComerciales = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["TB330FU"] = "Lenovo Tab M11",
+        ["TB330XU"] = "Lenovo Tab M11",
+        ["TB331FC"] = "Lenovo Tab M11",
+        ["TB330FUP"] = "Lenovo Tab M11",
+    };
 
     [GeneratedRegex(@"^[\p{L}\p{N} ._()+\-/·]+$")]
     private static partial Regex ModeloValido();

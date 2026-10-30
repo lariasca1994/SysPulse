@@ -74,11 +74,12 @@ public static class EquiposEndpoints
         });
 
         g.MapPost("/equipos/{id}/retiro", async (string id, RetiroEquipo r, ClaimsPrincipal u, ServicioHosts h, SysPulse.Infrastructure.Persistencia.Auditoria a,
-            SysPulse.Infrastructure.Notificaciones.ColaNotificaciones cola, SysPulse.Infrastructure.Cuentas.OpcionesCuentas web, ServicioChat chat, CancellationToken ct) =>
+            SysPulse.Infrastructure.Notificaciones.ColaNotificaciones cola, SysPulse.Infrastructure.Cuentas.OpcionesCuentas web, ServicioChat chat, ServicioIncidentes incidentes, CancellationToken ct) =>
         {
             var error = await h.RetirarAsync(id, r.Retirar, ct);
             if (error is null)
             {
+                if (r.Retirar) await incidentes.CerrarDeEquipoRetiradoAsync(id, ct);
                 await a.RegistrarAsync(r.Retirar ? "admin.equipo_retirado" : "admin.equipo_restaurado", ObjectId.Parse(u.FindFirstValue(JwtRegisteredClaimNames.Sub)!), null, null, "host", id, ct);
                 var nombre = (await h.EquiposAsync(ct)).FirstOrDefault(x => x.Id == id)?.Nombre ?? "Equipo";
                 var accion = r.Retirar ? "retirado" : "restaurado";

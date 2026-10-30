@@ -73,6 +73,9 @@ public sealed class ServicioIncidentes(
 
     public const string CierreAutomatico = "Se normalizó sin intervención";
 
+    /// <summary>Código de cierre de los incidentes de un equipo que se retiró de la operación.</summary>
+    public const string CierreEquipoRetirado = "Equipo retirado";
+
     private static readonly string[] EstadosAbiertos =
         [nameof(EstadoIncidente.Nuevo), nameof(EstadoIncidente.Asignado), nameof(EstadoIncidente.EnProgreso), nameof(EstadoIncidente.EnEspera), nameof(EstadoIncidente.Reabierto)];
 
@@ -92,6 +95,9 @@ public sealed class ServicioIncidentes(
             Ts = e.Ts.UtcDateTime, Recibido = Ahora, RespaldoEnviado = e.RespaldoEnviado,
         };
         await mongo.Eventos.InsertOneAsync(evento, cancellationToken: ct).ConfigureAwait(false);
+
+        // Un equipo retirado no cuenta para nada: el evento queda en el historial, pero no abre incidentes ni avisa.
+        if (await EsRetiradoAsync(e.Host, ct).ConfigureAwait(false)) return null;
 
         var nombreHost = await NombreHostAsync(e.Host, ct).ConfigureAwait(false);
         var abierto = await mongo.Incidentes
@@ -468,6 +474,14 @@ public sealed class ServicioIncidentes(
     {
         var abiertos = await mongo.Incidentes.Find(i => EstadosAbiertos.Contains(i.Estado)).ToListAsync(ct).ConfigureAwait(false);
 
+        // Los de equipos retirados se cierran: no consumen SLA ni cuentan en las estadísticas de abiertos.
+        var retirados = await RetiradosAsync(ct).ConfigureAwait(false);
+        foreach (var inc in abiertos.Where(i => i.HostId is { } h && retirados.Contains(h)).ToList())
+        {
+            await CerrarPorRetiroAsync(inc, ct).ConfigureAwait(false);
+            abiertos.Remove(inc);
+        }
+
         // Incidentes que se normalizaron hace rato sin que nadie los tomara (p. ej. los anteriores a la resolución
         // automática): se resuelven solos y dejan de consumir SLA.
         foreach (var inc in abiertos.Where(i => SinAtender(i) && i.MetricaRecuperada && Ahora - i.Actualizado > VentanaReapertura).ToList())
@@ -639,6 +653,40 @@ public sealed class ServicioIncidentes(
             await mongo.AsegurarMinimoAsync("incidentes", mayor, ct).ConfigureAwait(false);
         }
     }
+
+    /// <summary>Cierra los incidentes abiertos de un equipo al retirarlo (ITIL: el elemento de configuración salió de servicio).</summary>
+    public async Task<int> CerrarDeEquipoRetiradoAsync(string hostId, CancellationToken ct)
+    {
+        var abiertos = await mongo.Incidentes.Find(i => i.HostId == hostId && EstadosAbiertos.Contains(i.Estado)).ToListAsync(ct).ConfigureAwait(false);
+        var cerrados = 0;
+        foreach (var inc in abiertos)
+        {
+            if (await CerrarPorRetiroAsync(inc, ct).ConfigureAwait(false)) cerrados++;
+        }
+        return cerrados;
+    }
+
+    private async Task<bool> CerrarPorRetiroAsync(IncidenteDoc inc, CancellationToken ct)
+    {
+        var ahora = Ahora;
+        const string texto = "Cerrado porque el equipo se retiró de la operación: deja de contar en SLA y estadísticas (su historial se conserva).";
+        var u = Builders<IncidenteDoc>.Update
+            .Set(i => i.Estado, nameof(EstadoIncidente.Cerrado)).Set(i => i.Resuelto, inc.Resuelto ?? ahora).Set(i => i.Cerrado, ahora)
+            .Set(i => i.CodigoCierre, CierreEquipoRetirado).Set(i => i.Resolucion, texto).Set(i => i.Actualizado, ahora)
+            .Push(i => i.Historial, new HistorialDoc { Ts = ahora, Tipo = "estado", De = inc.Estado, A = nameof(EstadoIncidente.Cerrado), Texto = texto });
+        var r = await mongo.Incidentes.UpdateOneAsync(
+            Builders<IncidenteDoc>.Filter.Eq(i => i.Id, inc.Id) & Builders<IncidenteDoc>.Filter.Eq(i => i.Estado, inc.Estado), u,
+            cancellationToken: ct).ConfigureAwait(false);
+        if (r.ModifiedCount == 0) return false;
+        await chat.SistemaAsync(ServicioChat.SalaDeIncidente(inc.Id), $"🗄️ {texto}", ct).ConfigureAwait(false);
+        return true;
+    }
+
+    private async Task<HashSet<string>> RetiradosAsync(CancellationToken ct) =>
+        [.. await mongo.HostsAlias.Find(a => a.Retirado).Project(a => a.Id).ToListAsync(ct).ConfigureAwait(false)];
+
+    private Task<bool> EsRetiradoAsync(string hostId, CancellationToken ct) =>
+        mongo.HostsAlias.Find(a => a.Id == hostId && a.Retirado).AnyAsync(ct);
 
     private async Task<string> NombreHostAsync(string hostId, CancellationToken ct) =>
         (await hosts.ListarAsync(ct).ConfigureAwait(false)).FirstOrDefault(h => h.Id == hostId)?.Nombre ?? "Equipo monitoreado";
