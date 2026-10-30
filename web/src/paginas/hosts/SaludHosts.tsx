@@ -175,7 +175,7 @@ function Equipos({ lista, ahora }: { lista: Host[]; ahora: number }) {
                 <span className={s.grupoIcono}>{g.icono}</span>
                 {g.titulo}
                 <span className={`${s.grupoConteo} num`}>{grupo.length}</span>
-                {conAtencion > 0 && <span className={s.grupoAtencion}>{conAtencion} requieren atención</span>}
+                {conAtencion > 0 && <span className={s.grupoAtencion}>{conAtencion} {conAtencion === 1 ? "requiere" : "requieren"} atención</span>}
               </h2>
               <div className={s.grid}>
                 {grupo.map((h) => <TarjetaHost key={h.id} host={h} ahora={ahora} />)}

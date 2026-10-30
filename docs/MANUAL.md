@@ -162,10 +162,22 @@ gestor ve además los incidentes con SLA en riesgo, vencidos o P1.
 
 ![Salud de hosts](img/manual/05-hosts.png)
 
-Arriba, cuántos equipos están en línea, saludables, con alertas y en excepción. Cada tarjeta
-muestra el estado del agente (**En línea**, **Sin reporte**), la salud (**Saludable**,
-**Advertencia**, **Excepción**), la alerta activa y sus indicadores con las marcas de umbral.
-Se actualiza cada 30 segundos.
+Arriba, cuántos equipos están en línea, saludables, con alertas y en excepción. Debajo, la barra
+de herramientas:
+
+- **Buscar por nombre o modelo** (por ejemplo, "Redmi" o "Equipo portátil").
+- **Todos / Requieren atención:** el segundo deja solo los equipos con advertencia, excepción, sin
+  reporte o retrasados.
+- **Tipo de equipo:** escritorios, portátiles o celulares y tablets.
+- **Tarjetas / Lista:** la lista muestra una fila por equipo, útil cuando hay muchos. La plataforma
+  recuerda tu elección en ese navegador.
+
+Los equipos se agrupan por tipo y, dentro de cada grupo, aparecen primero los que requieren atención.
+Cada tarjeta muestra el nombre, el **modelo comercial** (por ejemplo, "Lenovo Tab M11 · Android"), el
+estado del agente (**En línea**, **Retrasado**, **Sin reporte**), la salud (**Saludable**,
+**Advertencia**, **Excepción**), la alerta activa, sus indicadores con las marcas de umbral y el
+**consumo de red** por Wi-Fi, cable UTP y datos móviles, con la conexión activa marcada. Un equipo
+sin reporte se ve atenuado: sus valores son viejos. Se actualiza cada 30 segundos.
 
 ![Detalle de un equipo](img/manual/06-host-detalle.png)
 
@@ -261,12 +273,23 @@ SLA por prioridad:
 2. **Windows:** descarga el agente desde GitHub Releases y, en PowerShell como administrador,
    ejecuta `.\SysPulse.AgentInstaller.exe install --codigo XXXX-XXXX`.
 3. **Android:** instala el APK, abre **SysPulse Agent**, escribe el código y pulsa **Vincular**.
-4. En menos de un minuto el equipo aparece en **Salud de hosts** con un nombre genérico.
+4. En menos de un minuto el equipo aparece en **Salud de hosts** con un nombre genérico y su modelo
+   comercial.
+
+**Actualizaciones:** son automáticas y obligatorias. En Windows las instala el servicio "SysPulse
+Actualizador" cada hora. En Android la app se actualiza sola; si el teléfono pide confirmación (la
+primera vez), deja una notificación fija **"Actualización obligatoria de SysPulse"**: tócala e
+instala. La app envía los datos por HTTPS, así que perder la señal o pasar de Wi-Fi a datos móviles
+no la cierra: lo que no pudo enviar lo guarda y lo reenvía después.
 
 ### 4.12 Preguntas frecuentes
 
 **¿El agente puede ver mis archivos o lo que escribo?** No. Solo envía las métricas técnicas de la
 tabla de la sección 4.
+
+**¿Qué es la animación al abrir la app?** Si instalaste SysPulse como app, al abrirla desde su
+ícono se dibuja el pulso durante un segundo y medio. En el navegador no aparece. El ícono del
+escritorio del teléfono no se anima: Android no lo permite a ninguna app.
 
 **¿Por qué mi alerta no abrió un incidente?** El valor debe superar el umbral durante 8 minutos
 seguidos; los picos breves se ignoran a propósito.
@@ -299,9 +322,9 @@ Tu confianza es lo primero: la plataforma solo pide los datos necesarios para fu
 | Se captura | No se captura nunca |
 |---|---|
 | Identificador anónimo (`win-` / `and-` + huella de 10 caracteres) | Nombre del equipo, usuario de Windows o cuenta del celular |
-| Tipo de equipo y versión del agente | Marca, modelo, número de serie o IMEI |
+| Tipo de equipo, versión del agente y modelo comercial (p. ej. "Lenovo Tab M11") | Nombre que el dueño le puso al equipo, número de serie o IMEI |
 | CPU, memoria, paginación y disco (promedio, mínimo, máximo y percentil 95) | Archivos, documentos, fotos, contactos o mensajes |
-| Tráfico, errores, latencia y pérdida hacia DNS públicos, señal y número de puertos en escucha | Direcciones IP, ubicación, nombre de la red Wi-Fi o aplicaciones instaladas |
+| Tráfico y consumo por Wi-Fi, cable UTP y datos móviles; errores, latencia y pérdida hacia DNS públicos, señal y número de puertos en escucha | Direcciones IP, ubicación, nombre de la red Wi-Fi o aplicaciones instaladas |
 | Almacenamiento libre y, en celulares, batería y temperatura | Historial de navegación o pulsaciones de teclado |
 
 Las métricas se conservan 90 días.

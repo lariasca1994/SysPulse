@@ -75,7 +75,11 @@ operaciones. Todo corre en capas gratuitas.
 - **Equipos sin fricción:** alta con un código de un solo uso, nombre genérico más el modelo comercial
   para saber dónde está cada agente (nunca el nombre que le dio el dueño) y actualización automática de
   los agentes con verificación de huella.
-- **PWA instalable** con tema claro y oscuro.
+- **PWA instalable** con tema claro y oscuro y animación de entrada (pulso que se dibuja) al abrirla
+  desde su ícono. El agente Android no la tiene.
+- **Panel de equipos ordenado:** primero los que requieren atención, agrupados por tipo (escritorios,
+  portátiles, celulares y tablets), con búsqueda por nombre o modelo, filtros, vista de tarjetas o de
+  lista y el consumo de red por Wi-Fi, cable UTP y datos móviles.
 
 ### Stack
 
