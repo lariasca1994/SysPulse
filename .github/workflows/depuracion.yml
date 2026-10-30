@@ -1,0 +1,39 @@
+name: Depuración quincenal
+
+# Cada 15 días (días 1 y 16 de cada mes) borra lo que se acumula y ya no sirve:
+#   - cachés de GitHub Actions sin usar en 15 días;
+#   - artefactos de Actions con más de 15 días.
+# Corre con el token del propio repositorio: no necesita secretos.
+on:
+  schedule:
+    - cron: '0 6 1,16 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  depurar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cachés de Actions sin usar en 15 días
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          limite=$(date -u -d '15 days ago' +%s)
+          gh api --paginate "repos/${{ github.repository }}/actions/caches?per_page=100"             --jq '.actions_caches[] | "\(.id) \(.last_accessed_at)"' | while read -r id fecha; do
+            if [ "$(date -u -d "$fecha" +%s)" -lt "$limite" ]; then
+              gh api -X DELETE "repos/${{ github.repository }}/actions/caches/$id" > /dev/null && echo "caché $id borrada"
+            fi
+          done
+      - name: Artefactos de Actions con más de 15 días
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          limite=$(date -u -d '15 days ago' +%s)
+          gh api --paginate "repos/${{ github.repository }}/actions/artifacts?per_page=100"             --jq '.artifacts[] | "\(.id) \(.created_at)"' | while read -r id fecha; do
+            if [ "$(date -u -d "$fecha" +%s)" -lt "$limite" ]; then
+              gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" > /dev/null && echo "artefacto $id borrado"
+            fi
+          done
