@@ -21,6 +21,9 @@
 				<action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
 			</intent-filter>
 		</receiver>
+
+		<!-- Vigilante: alarma cada 15 min que vuelve a iniciar el monitoreo si el sistema lo cerró o se detuvo. -->
+		<receiver android:name="dev.syspulse.agent.VigilanteReceiver" android:exported="false" />
 	</application>
 
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -30,6 +33,10 @@
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 	<uses-permission android:name="android.permission.WAKE_LOCK" />
+	<!-- Alarma exacta del vigilante: permite volver a iniciar el servicio en primer plano desde segundo plano.
+	     USE_EXACT_ALARM se concede al instalar (Android 13+); en Android 12 se usa SCHEDULE_EXACT_ALARM. -->
+	<uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+	<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
 	<uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 	<!-- Actualizaciones: Android pide confirmación en cada instalación (la primera vez, permitir "instalar apps desconocidas"). -->
 	<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />

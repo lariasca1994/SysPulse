@@ -11,17 +11,22 @@ export const MAX_METRICAS = 200;
 export const MAX_DOCUMENTOS = 100;
 const MAX_CUERPO = 512 * 1024;
 
-let cliente: MongoClient | null = null;
+let conexion: Promise<MongoClient> | null = null;
 
-/** Cliente reutilizado entre invocaciones de la misma instancia (pocas conexiones a Atlas). */
+/**
+ * Cliente reutilizado entre invocaciones de la misma instancia (pocas conexiones a Atlas). Si la conexión falla, no
+ * se guarda: antes quedaba un cliente sin conectar y esa instancia respondía 500 a todos los agentes hasta reciclarse.
+ */
 export async function base(): Promise<Db> {
   const uri = (process.env.MONGO_URI_INGESTA ?? process.env.MONGO_URI)?.trim();
   if (!uri) throw new Error("Falta la configuración de la base");
-  if (!cliente) {
-    cliente = new MongoClient(uri, { maxPoolSize: 3, appName: "SysPulse.Ingesta", serverSelectionTimeoutMS: 15000 });
-    await cliente.connect();
-  }
-  return cliente.db();
+  conexion ??= new MongoClient(uri, { maxPoolSize: 3, appName: "SysPulse.Ingesta", serverSelectionTimeoutMS: 15000 })
+    .connect()
+    .catch((error: unknown) => {
+      conexion = null;
+      throw error;
+    });
+  return (await conexion).db();
 }
 
 export function respuesta(estado: number, cuerpo?: unknown): Response {

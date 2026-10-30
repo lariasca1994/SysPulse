@@ -32,14 +32,49 @@ public sealed partial class ServicioMonitoreo : Service
     /// <summary>Motor en ejecución (la pantalla lee su estado). Null si el servicio no corre.</summary>
     public static MotorAgente? Motor { get; private set; }
 
+    private static DateTimeOffset _inicioMotor = DateTimeOffset.MaxValue;
+
+    /// <summary>
+    /// El servicio corre pero el motor dejó de medir (colgado o fallando sin parar) por más de
+    /// <see cref="VigilanteReceiver.SinLatido"/>: el vigilante reinicia la app.
+    /// </summary>
+    public static bool Detenido
+    {
+        get
+        {
+            var ahora = DateTimeOffset.UtcNow;
+            if (ahora - _inicioMotor < VigilanteReceiver.SinLatido) return false;
+            var ultimo = Motor?.Estado.UltimoCiclo;
+            return Motor is not null && (ultimo is null || ahora - ultimo > VigilanteReceiver.SinLatido);
+        }
+    }
+
     public static void Iniciar(Context contexto)
     {
         var intento = new Intent(contexto, typeof(ServicioMonitoreo));
         contexto.StartForegroundService(intento);
     }
 
+    /// <summary>Inicio desde segundo plano (vigilante, arranque): si Android no lo permite en ese momento, lo reintenta la próxima alarma.</summary>
+    public static void IniciarSeguro(Context contexto)
+    {
+        try
+        {
+            Iniciar(contexto);
+        }
+        catch (Java.Lang.Exception)
+        {
+            // ForegroundServiceStartNotAllowedException u otra restricción del sistema: el vigilante vuelve a intentar.
+        }
+        catch (InvalidOperationException)
+        {
+            // Ídem.
+        }
+    }
+
     public static void Detener(Context contexto)
     {
+        VigilanteReceiver.Cancelar(contexto);
         var intento = new Intent(contexto, typeof(ServicioMonitoreo)).SetAction(AccionDetener);
         contexto.StartService(intento);
     }
@@ -73,6 +108,9 @@ public sealed partial class ServicioMonitoreo : Service
             StartForeground(IdNotificacion, notificacion);
         }
 
+        // Vigilante: aunque el sistema cierre la app, una alarma la vuelve a abrir.
+        VigilanteReceiver.Programar(this);
+
         if (_cancelacion is null)
         {
             _cancelacion = new CancellationTokenSource();
@@ -89,29 +127,56 @@ public sealed partial class ServicioMonitoreo : Service
         return StartCommandResult.Sticky;
     }
 
+    /// <summary>
+    /// Corre el motor y, si se detiene por un error, lo vuelve a arrancar con una espera creciente (30 s a 5 min).
+    /// Antes quedaba detenido con la notificación visible y el equipo dejaba de reportar.
+    /// </summary>
     private async Task CorrerAsync(CancellationToken ct)
     {
         var log = Logs.CreateLogger<ServicioMonitoreo>();
-        try
+        var espera = TimeSpan.FromSeconds(30);
+        while (!ct.IsCancellationRequested)
         {
-            var opciones = await ConfiguracionAndroid.CargarOpcionesAsync();
-            _buffer = new BufferLocal(Path.Combine(opciones.CarpetaDatos, "agente.db"));
-            ICollector[] colectores = [new BateriaCollector(), new SistemaCollector(), new RedMovilCollector()];
-                        Motor = new MotorAgente(colectores, opciones, _buffer, Logs.CreateLogger<MotorAgente>());
-            // Versión nueva publicada en la configuración central: se descarga y se avisa con una notificación.
-            Motor.ConfiguracionAplicada += config => ActualizadorAndroid.Revisar(this, config, log);
-            await Motor.EjecutarAsync(AppInfo.Current.VersionString, [], ct);
-        }
-        catch (System.OperationCanceledException)
-        {
-            // Detenido por el usuario.
-        }
-#pragma warning disable CA1031 // El servicio no debe caerse: se registra y queda detenido.
-        catch (Exception ex)
+            try
+            {
+                var opciones = await ConfiguracionAndroid.CargarOpcionesAsync();
+                _buffer ??= new BufferLocal(Path.Combine(opciones.CarpetaDatos, "agente.db"));
+                ICollector[] colectores = [new BateriaCollector(), new SistemaCollector(), new RedMovilCollector()];
+                _inicioMotor = DateTimeOffset.UtcNow;
+                Motor = new MotorAgente(colectores, opciones, _buffer, Logs.CreateLogger<MotorAgente>());
+                // Versión nueva publicada en la configuración central: se descarga y se avisa con una notificación.
+                Motor.ConfiguracionAplicada += config => ActualizadorAndroid.Revisar(this, config, log);
+                await Motor.EjecutarAsync(AppInfo.Current.VersionString, [], ct);
+                espera = TimeSpan.FromSeconds(30);
+            }
+            catch (System.OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return; // Detenido por el usuario.
+            }
+#pragma warning disable CA1031 // El servicio no debe caerse: se registra y el motor vuelve a arrancar.
+            catch (Exception ex)
 #pragma warning restore CA1031
-        {
-            LogMotorDetenido(log, ex);
+            {
+                LogMotorDetenido(log, ex);
+            }
+
+            try
+            {
+                await Task.Delay(espera, ct);
+            }
+            catch (System.OperationCanceledException)
+            {
+                return;
+            }
+            espera = TimeSpan.FromTicks(Math.Min(espera.Ticks * 2, TimeSpan.FromMinutes(5).Ticks));
         }
+    }
+
+    /// <summary>La app se quitó de Recientes: algunos fabricantes cierran también el servicio, así que se programa su regreso.</summary>
+    public override void OnTaskRemoved(Intent? rootIntent)
+    {
+        if (ConfiguracionAndroid.MonitoreoActivo) VigilanteReceiver.Programar(this, TimeSpan.FromSeconds(5));
+        base.OnTaskRemoved(rootIntent);
     }
 
     public override void OnDestroy()
@@ -126,7 +191,7 @@ public sealed partial class ServicioMonitoreo : Service
         base.OnDestroy();
     }
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "El motor se detuvo por un error")]
+    [LoggerMessage(Level = LogLevel.Error, Message = "El motor se detuvo por un error; se reintenta")]
     private static partial void LogMotorDetenido(ILogger logger, Exception ex);
 
     private void CrearCanal()

@@ -27,6 +27,10 @@ internal sealed class ServicioActualizador(IHostApplicationLifetime vida) : Back
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Equipos instalados antes de la marca: el reinicio automático también aplica cuando el servicio se detiene
+        // con código de error (el que usa al reemplazarse a sí mismo).
+        Instalacion.ActivarReinicioActualizador();
+
         // Espera inicial: no compite con el arranque del equipo ni del agente.
         await Task.Delay(EsperaInicial, stoppingToken).ConfigureAwait(false);
         while (!stoppingToken.IsCancellationRequested)
@@ -37,6 +41,16 @@ internal sealed class ServicioActualizador(IHostApplicationLifetime vida) : Back
             // con código de error para que Windows lo vuelva a iniciar ya con la versión nueva.
             if (Environment.ProcessPath is { } exe && File.Exists(exe + ".old"))
             {
+                // Proceso aparte con el ejecutable nuevo: espera a que este se detenga y lo vuelve a iniciar.
+                // Antes dependía solo de la recuperación de Windows, que no actúa ante una detención ordenada.
+                try
+                {
+                    Instalacion.ProgramarReinicioActualizador(exe);
+                }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    // Queda la recuperación de Windows (failureflag) como respaldo.
+                }
                 Environment.ExitCode = 1;
                 vida.StopApplication();
                 return;

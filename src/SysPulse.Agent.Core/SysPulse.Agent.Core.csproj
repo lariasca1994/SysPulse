@@ -18,4 +18,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="SysPulse.Agent.Core.Tests" />
+  </ItemGroup>
 </Project>

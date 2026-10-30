@@ -85,4 +85,56 @@ public class PublicadorIngestaTests
         using var p = new PublicadorIngesta("https://ejemplo.test", "k", new Falso(HttpStatusCode.InternalServerError));
         await Assert.ThrowsAsync<HttpRequestException>(() => p.RegistrarHostAsync("and-0123456789", "android", "0.7.0", "Lenovo Tab M11", CancellationToken.None));
     }
+
+    /// <summary>Falla las primeras peticiones como al cambiar de red y luego responde bien.</summary>
+    private sealed class Intermitente(int fallos) : HttpMessageHandler
+    {
+        public int Intentos { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Intentos++;
+            if (Intentos <= fallos) throw new HttpRequestException("Socket closed", new IOException("Socket closed"));
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+        }
+    }
+
+    [Fact]
+    public async Task SocketCerrado_SeReintentaYElEnvioSale()
+    {
+        var antes = PublicadorIngesta.Reintentos;
+        PublicadorIngesta.Reintentos = [TimeSpan.Zero, TimeSpan.Zero];
+        try
+        {
+            var red = new Intermitente(fallos: 2);
+            using var p = new PublicadorIngesta("https://ejemplo.test", "k", red);
+            await p.ActualizarEstadoAsync("and-0123456789", "android", [new Lectura("bateria.pct", 80, "%", DateTimeOffset.UtcNow)], CancellationToken.None);
+            Assert.Equal(3, red.Intentos);
+
+            var caida = new Intermitente(fallos: 5);
+            using var p2 = new PublicadorIngesta("https://ejemplo.test", "k", caida);
+            await Assert.ThrowsAsync<HttpRequestException>(() =>
+                p2.ActualizarEstadoAsync("and-0123456789", "android", [new Lectura("bateria.pct", 80, "%", DateTimeOffset.UtcNow)], CancellationToken.None));
+            Assert.Equal(3, caida.Intentos); // Tres intentos y se rinde: el motor guarda los datos para el próximo ciclo.
+        }
+        finally
+        {
+            PublicadorIngesta.Reintentos = antes;
+        }
+    }
+
+    [Theory]
+    [InlineData("Socket closed")]
+    [InlineData("Connection reset")]
+    [InlineData("Unable to resolve host \"syspulse.vercel.app\"")]
+    public void ErroresDeRed_SeMuestranComoCaidaMomentanea(string mensaje)
+    {
+        Assert.StartsWith("sin conexión momentánea", MotorAgente.MensajeError(new IOException(mensaje)), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TiempoAgotado_EsCaidaMomentaneaNoCancelacion()
+    {
+        Assert.StartsWith("sin conexión momentánea", MotorAgente.MensajeError(new TaskCanceledException("timeout")), StringComparison.Ordinal);
+    }
 }

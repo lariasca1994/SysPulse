@@ -30,6 +30,7 @@ public sealed partial class MotorAgente(
     private IPublicador? _atlas;
     private readonly Dictionary<string, Lectura> _estadoPendiente = new(StringComparer.Ordinal);
     private DateTimeOffset _ultimoEstado = DateTimeOffset.MinValue;
+    private CancellationToken _ct;
     private EvaluadorAlertas _evaluador = null!;
     private DateTimeOffset _ventanaActual;
     private DateTimeOffset _ultimoEnvio = DateTimeOffset.MinValue;
@@ -51,6 +52,7 @@ public sealed partial class MotorAgente(
     /// <summary>Corre hasta que se cancele. <paramref name="umbralesExtra"/>: umbrales que dependen del equipo (ej. una por unidad de disco).</summary>
     public async Task EjecutarAsync(string version, IEnumerable<Umbral> umbralesExtra, CancellationToken ct)
     {
+        _ct = ct;
         _umbralesBase = [.. opciones.Umbrales.Concat(umbralesExtra)];
         _evaluador = new EvaluadorAlertas(opciones.HostId, _umbralesBase, opciones.PersistenciaAlertas);
         _ventanaActual = Agregador.InicioVentana(DateTimeOffset.UtcNow, opciones.VentanaAgregado);
@@ -88,7 +90,17 @@ public sealed partial class MotorAgente(
         using var timer = new PeriodicTimer(opciones.IntervaloLectura);
         do
         {
-            await CicloAsync(ct).ConfigureAwait(false);
+            try
+            {
+                await CicloAsync(ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                // Un ciclo con error (red, tiempo de espera, base local) no detiene el motor: el siguiente vuelve a intentar.
+                // Antes, un tiempo de espera agotado de HttpClient (TaskCanceledException) detenía el agente para siempre.
+                Estado = Estado with { UltimoError = $"{DateTimeOffset.Now:HH:mm} · ciclo: {MensajeError(ex)}" };
+                LogFalloAccion("ciclo", ex.GetType().Name, ex.Message);
+            }
         }
         while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false));
     }
@@ -102,7 +114,7 @@ public sealed partial class MotorAgente(
             {
                 lecturas.AddRange(await collector.LeerAsync(ct).ConfigureAwait(false));
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!ct.IsCancellationRequested)
             {
                 LogFalloColector(ex, collector.Nombre);
             }
@@ -296,16 +308,34 @@ public sealed partial class MotorAgente(
         LogSla(pendientes, ok);
     }
 
+    /// <summary>
+    /// Mensaje entendible para la pantalla. Las caídas de red (socket cerrado, conexión reiniciada, sin DNS, tiempo
+    /// agotado) son normales al moverse entre redes: los datos quedan guardados en el teléfono y se reenvían solos.
+    /// </summary>
+    internal static string MensajeError(Exception ex)
+    {
+        var texto = ex.Message;
+        string[] deRed = ["socket", "closed", "reset", "refused", "unreachable", "resolve host", "failed to connect", "timed out",
+            "timeout", "network", "connection", "abort", "eof", "broken pipe", "ssl", "handshake"];
+        var red = ex is HttpRequestException or IOException or TimeoutException or TaskCanceledException
+                  || deRed.Any(p => texto.Contains(p, StringComparison.OrdinalIgnoreCase));
+        if (ex is HttpRequestException { StatusCode: { } codigo }) return $"el servidor respondió {(int)codigo}; se reintenta solo";
+        return red ? "sin conexión momentánea; se reintenta solo y los datos quedan guardados" : texto;
+    }
+
     private async Task<bool> IntentarAsync(string accion, Func<Task> trabajo)
     {
         try
         {
             await trabajo().ConfigureAwait(false);
+            // Se recuperó: el aviso de error de esta misma acción deja de mostrarse.
+            if (Estado.UltimoError?.Contains(accion, StringComparison.Ordinal) == true) Estado = Estado with { UltimoError = null };
             return true;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!_ct.IsCancellationRequested)
         {
-            Estado = Estado with { UltimoError = $"{accion}: {ex.Message}" };
+            // Solo la detención pedida corta el trabajo; un tiempo de espera de HTTP (también OperationCanceledException) es un fallo más.
+            Estado = Estado with { UltimoError = $"{DateTimeOffset.Now:HH:mm} · {accion}: {MensajeError(ex)}" };
             LogFalloAccion(accion, ex.GetType().Name, ex.Message);
             return false;
         }

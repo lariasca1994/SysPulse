@@ -52,9 +52,9 @@ public partial class MainPage : ContentPage
 		var e = motor.Estado;
 		HostLabel.Text = $"Host: {DeviceInfo.Current.Manufacturer} {DeviceInfo.Current.Model}";
 		CicloLabel.Text = $"Último ciclo: {Hora(e.UltimoCiclo)} ({e.LecturasUltimoCiclo} lecturas)";
-		EnvioLabel.Text = $"Último envío a Atlas: {Hora(e.UltimoEnvioAtlas)}";
+		EnvioLabel.Text = $"Último envío a SysPulse: {Hora(e.UltimoEnvioAtlas)}";
 		BufferLabel.Text = e.Buffer;
-		ErrorLabel.Text = e.UltimoError ?? "";
+		ErrorLabel.Text = e.UltimoError is null ? "" : $"Último aviso: {e.UltimoError}";
 	}
 
 	private static string Hora(DateTimeOffset? ts) =>

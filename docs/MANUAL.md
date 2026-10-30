@@ -282,6 +282,15 @@ primera vez), deja una notificación fija **"Actualización obligatoria de SysPu
 instala. La app envía los datos por HTTPS, así que perder la señal o pasar de Wi-Fi a datos móviles
 no la cierra: lo que no pudo enviar lo guarda y lo reenvía después.
 
+**Si el sistema cierra la app:** algunos teléfonos (por ejemplo Xiaomi y Redmi con su ahorro de
+batería) cierran apps en segundo plano. SysPulse revisa cada 15 minutos que el monitoreo siga
+activo y, si se cerró o dejó de medir, lo vuelve a abrir solo. En la pantalla de la app, un aviso
+como "sin conexión momentánea; se reintenta solo" es normal al cambiar de red: los datos quedan
+guardados y se envían cuando vuelve la conexión, y el aviso desaparece solo. Para que funcione
+mejor, en Ajustes → Batería deja SysPulse **sin restricciones**.
+
+En Windows, el servicio "SysPulse Actualizador" se reinicia solo después de actualizarse.
+
 ### 4.12 Preguntas frecuentes
 
 **¿El agente puede ver mis archivos o lo que escribo?** No. Solo envía las métricas técnicas de la

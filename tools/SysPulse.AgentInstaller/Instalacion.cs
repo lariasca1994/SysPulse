@@ -237,6 +237,9 @@ internal static class Instalacion
         }
         Sc($"description {nombre} \"SysPulse: instala las versiones nuevas del agente publicadas en GitHub Releases (verifica la huella SHA-256).\"");
         Sc($"failure {nombre} reset= 86400 actions= restart/60000/restart/60000/restart/300000");
+        // Sin esta marca, Windows no aplica el reinicio cuando el servicio se detiene con código de error
+        // (lo que hace al reemplazarse a sí mismo): quedaba detenido hasta el próximo reinicio del equipo.
+        Sc($"failureflag {nombre} 1");
         BorrarTareaAntigua();
         Sc($"start {nombre}");
         Console.WriteLine("   servicio listo: " + nombre);
@@ -352,6 +355,38 @@ internal static class Instalacion
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Reinicio del servicio actualizador tras reemplazarse a sí mismo: espera a que la instancia anterior se
+    /// detenga (hasta 3 minutos) y lo inicia con el ejecutable nuevo. No depende de la recuperación de Windows.
+    /// </summary>
+    public static async Task<int> ReiniciarActualizadorAsync()
+    {
+        var nombre = ServicioActualizador.Nombre;
+        Sc($"failureflag {nombre} 1");
+        for (var intento = 0; intento < 60; intento++)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+            var (_, salida) = Ejecutar("sc.exe", $"query {nombre}");
+            // El estado se lee por su código numérico (1 = detenido), igual en Windows en español o en inglés.
+            if (!Regex.IsMatch(salida, @"(STATE|ESTADO)\s*:\s*1\s", RegexOptions.IgnoreCase)) continue;
+            return Ejecutar("sc.exe", $"start {nombre}").Codigo;
+        }
+        return 1;
+    }
+
+    public static void ActivarReinicioActualizador() => Sc($"failureflag {ServicioActualizador.Nombre} 1");
+
+    /// <summary>Lanza "reiniciar-actualizador" con el ejecutable nuevo, como proceso aparte que sobrevive al servicio.</summary>
+    public static void ProgramarReinicioActualizador(string ejecutable)
+    {
+        using var p = Process.Start(new ProcessStartInfo(ejecutable, "reiniciar-actualizador")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = Path.GetDirectoryName(ejecutable)!,
+        });
     }
 
     private static bool ServicioExiste() => Ejecutar("sc.exe", $"query {Servicio}").Codigo == 0;

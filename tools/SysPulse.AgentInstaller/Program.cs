@@ -36,6 +36,9 @@ if (comando == "estado")
 // Modo servicio: lo inicia Windows (servicio SysPulseActualizador), no una persona.
 if (comando == "servicio-actualizador") return await ServicioActualizador.EjecutarAsync(args);
 
+// Lo lanza el propio servicio actualizador tras reemplazarse: espera a que se detenga y lo vuelve a iniciar.
+if (comando == "reiniciar-actualizador") return await Instalacion.ReiniciarActualizadorAsync();
+
 if (comando is not ("install" or "update" or "uninstall" or "secretos" or "auto-actualizar"))
 {
     Console.WriteLine(Uso);

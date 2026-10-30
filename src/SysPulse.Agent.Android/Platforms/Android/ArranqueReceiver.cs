@@ -14,6 +14,8 @@ public sealed class ArranqueReceiver : BroadcastReceiver
     {
         if (context is null) return;
         if (intent?.Action is not (Intent.ActionBootCompleted or Intent.ActionMyPackageReplaced)) return;
-        if (ConfiguracionAndroid.MonitoreoActivo) ServicioMonitoreo.Iniciar(context);
+        if (!ConfiguracionAndroid.MonitoreoActivo) return;
+        VigilanteReceiver.Programar(context);
+        ServicioMonitoreo.IniciarSeguro(context);
     }
 }
