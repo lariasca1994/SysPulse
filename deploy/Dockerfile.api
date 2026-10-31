@@ -1,7 +1,7 @@
 # API de SysPulse para Render (web service gratuito). Construir desde la raíz del repo:
 #   docker build -f deploy/Dockerfile.api -t syspulse-api .
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0.402 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.403 AS build
 WORKDIR /src
 
 # Restaurar primero (capa en caché mientras no cambien los .csproj).
@@ -20,7 +20,7 @@ COPY src/SysPulse.Agent.Core/ src/SysPulse.Agent.Core/
 COPY src/SysPulse.Api/ src/SysPulse.Api/
 RUN dotnet publish src/SysPulse.Api/SysPulse.Api.csproj -c Release -o /app --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.13 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.14 AS runtime
 # Seguridad en cada compilación: actualizaciones del sistema (Linux), pip al día (sus
 # CVE de octubre 2026) y almacén de certificados sin las raíces que firmaron los
 # intermedios comprometidos de eMudhra (emSign y Comodo "AAA Certificate Services").
