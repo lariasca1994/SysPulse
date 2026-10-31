@@ -795,7 +795,7 @@ Objetivo: que ningún usuario, por error o mala intención, pueda causar daños 
 ### Registro de cuentas, contraseña y MFA
 
 - **Registro propio:** cada persona crea su cuenta. En el formulario de registro **elige su nivel: solo `N1`, `N2` o `N3`**. El admin no crea cuentas ni asigna esos niveles.
-- **Contraseña propia:** la define cada usuario. Mínimo 12 caracteres, se rechazan contraseñas comunes, se guarda solo el hash (`PasswordHasher` de ASP.NET Core Identity, PBKDF2). Nadie, ni el admin, puede ver ni fijar la contraseña de otro.
+- **Contraseña propia:** la define cada usuario. Mínimo 12 caracteres, se rechazan contraseñas comunes, se guarda solo el hash. Nadie, ni el admin, puede ver ni fijar la contraseña de otro.
 - **Verificación de correo** al registrarse (enlace por Brevo API). Sin verificar, la cuenta no puede iniciar sesión.
 - **Telegram obligatorio en el registro.** El formulario pide **una** de estas dos opciones:
   - **Nombre de usuario** de Telegram (ej. `@ana_perez`; 5–32 caracteres: letras, números y `_`).

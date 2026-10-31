@@ -327,8 +327,8 @@ Tu confianza es lo primero: la plataforma solo pide los datos necesarios para fu
 |---|---|---|---|
 | Nombre, correo y nivel | Identificarte y asignarte incidentes | MongoDB Atlas | Solo los ve el equipo de operaciones |
 | Usuario o número de Telegram | Enviarte los avisos de tu nivel | MongoDB Atlas | Se verifica con un código del bot |
-| Contraseña | Iniciar sesión | MongoDB Atlas, **solo su huella PBKDF2** | No se puede leer ni recuperar |
-| Secreto de la app autenticadora | Segundo factor | MongoDB Atlas, **cifrado con AES-GCM** | La clave de cifrado vive fuera de la base |
+| Contraseña | Iniciar sesión | MongoDB Atlas, **solo su huella** | No se puede leer ni recuperar |
+| Secreto de la app autenticadora | Segundo factor | MongoDB Atlas, **cifrado** | Nadie desde la aplicación |
 | Código por correo | Segundo factor | MongoDB Atlas, **solo su huella** (10 minutos) | Nadie: no se puede leer |
 | Códigos de recuperación y enlaces | Recuperar el acceso | Solo su huella SHA-256 | Un solo uso, con límite de intentos |
 | Sesión | Mantenerte conectado | `sessionStorage` del navegador | Se borra al cerrar la pestaña; dura 8 horas |
