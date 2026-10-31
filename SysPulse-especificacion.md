@@ -809,7 +809,7 @@ La API de bots de Telegram **no permite que un bot escriba primero** a un @usuar
 2. Telegram envía ese inicio al webhook de la API (protegido con `TELEGRAM_WEBHOOK_SECRET`), que comprueba la identidad según lo que se registró:
    - **@usuario:** el `username` que llega de Telegram debe coincidir (sin distinguir mayúsculas) con el registrado. Si no coincide, se rechaza y se avisa en la plataforma.
    - **Número:** el bot responde con un botón **"Compartir mi número"** (`request_contact`). El contacto recibido debe ser **del propio usuario** (`contact.user_id == from.id`) y su número normalizado debe coincidir con el registrado.
-3. Si coincide, el bot envía un **código de 6 dígitos** por Telegram (válido 10 min, máximo 5 intentos, máximo 3 códigos por hora).
+3. Si coincide, el bot envía un **código de 6 dígitos** por Telegram (válido por pocos minutos, con intentos y envíos limitados).
 4. El usuario escribe el código en la plataforma. Al acertar, se guarda el `chat_id` y la cuenta queda con **Telegram verificado**.
 
 - Sin Telegram verificado la cuenta no se activa (es el canal de avisos por nivel).
@@ -822,7 +822,7 @@ La API de bots de Telegram **no permite que un bot escriba primero** a un @usuar
   - Se entregan **10 códigos de recuperación** de un solo uso (guardados como hash).
   - **Sin MFA por SMS** (tiene costo y es menos seguro).
 - **Recuperar contraseña:** enlace de un solo uso por correo (Brevo API), válido 30 minutos; sigue exigiendo el MFA.
-- **Bloqueo** tras 5 intentos fallidos durante 15 minutos; rate limiting en `/auth/*`.
+- **Bloqueo temporal** ante intentos fallidos repetidos y límite de peticiones en la autenticación.
 - **Cuenta admin semilla:** se crea al arrancar si no existe, con correo y contraseña temporal de variables de entorno. En el primer inicio de sesión se obliga a cambiar la contraseña y configurar el MFA. Es también la cuenta de testeo.
 - Nada de esto se sube al repositorio ni aparece en el README.
 
@@ -835,7 +835,7 @@ La API de bots de Telegram **no permite que un bot escriba primero** a un @usuar
   - Atlas Network Access `0.0.0.0/0`, con TLS obligatorio (por defecto en Atlas).
   - Dos usuarios de BD distintos, `syspulse-api` y `syspulse-agent`, con contraseñas aleatorias de 32+ caracteres, acceso solo a la base `syspulse`, sin permisos de administración del clúster. Rotación si hay sospecha de filtración.
   - Si M0 permite roles personalizados, `syspulse-agent` solo puede insertar y actualizar en `metricas_5m`, `latencia_5m`, `estado_actual` y `resumen_diario`.
-  - La API en Render no filtra por IP: se protege con JWT + MFA para personas y API keys por cliente (agente y CI), más rate limiting.
+  - La API se protege con JWT + MFA para personas y API keys por cliente (agente y CI), más rate limiting.
 
 ---
 
