@@ -190,9 +190,9 @@ asigna el sistema, acompañado de su modelo comercial para ubicarlo.
 
 - **Al día en seguridad:** el runtime, el sistema y las dependencias se mantienen con los últimos
   parches y se revisan periódicamente.
-- **Cuentas:** contraseña con PBKDF2, MFA obligatorio (app o correo; 5 códigos errados lo bloquean
-  15 minutos), bloqueo por intentos, sesiones que se cierran
-  al cambiar contraseña, rol o MFA, y auditoría de solo inserción.
+- **Cuentas:** contraseñas protegidas, MFA obligatorio (app o correo), bloqueo temporal ante
+  intentos fallidos repetidos, registro de eventos de seguridad depurado a los 15 días y sesiones
+  que se cierran al cambiar contraseña, rol o MFA.
 - **Roles:** N1, N2 y N3 los elige cada persona al registrarse; el rol **gestor** se solicita y solo
   lo aprueba el **admin**. Nadie borra datos: el admin solo desactiva o retira.
 - **Privacidad:** cada equipo se muestra con un nombre genérico (“Equipo portátil 2”, “Celular 1”) y su

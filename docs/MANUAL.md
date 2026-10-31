@@ -347,21 +347,17 @@ Las métricas se conservan 90 días.
 
 ### Cómo se protege tu información
 
-Comprobado en el código del proyecto (`src/SysPulse.Infrastructure/Cuentas`,
-`src/SysPulse.Infrastructure/Seguridad`, `src/SysPulse.Api`, `web/src/sesion.tsx`):
-
-- **Contraseñas con PBKDF2** (`PasswordHasher` de ASP.NET Core) y mínimo de 12 caracteres.
-- **MFA obligatorio** con app autenticadora (TOTP) o código por correo, y 10 códigos de
-  recuperación; el secreto del autenticador se guarda cifrado con AES-GCM y el código del correo
-  solo como huella (vence en 10 minutos y sirve una vez). Un código de la app no se acepta dos veces
-  y 5 códigos errados bloquean el segundo factor 15 minutos.
-- **Bloqueo por intentos:** 5 contraseñas erradas bloquean la cuenta 15 minutos; los códigos de
-  verificación admiten 5 intentos y se comparan en tiempo constante.
-- **Límite de peticiones** en los endpoints de autenticación (20 por minuto) y de los agentes (60
-  por minuto).
+- **Contraseñas protegidas:** solo se guarda su huella, y se exige una contraseña larga.
+- **MFA obligatorio** con app autenticadora (TOTP) o código por correo, y códigos de recuperación;
+  el secreto del autenticador se guarda cifrado y el código del correo vence en pocos minutos y
+  sirve una vez. Un código no se acepta dos veces.
+- **Bloqueo temporal** ante intentos fallidos repetidos de contraseña o de código.
+- **Registro de eventos de seguridad:** ingresos, intentos fallidos, bloqueos y cambios de
+  contraseña quedan registrados (nunca contraseñas ni códigos) y se depuran solos.
+- **Límite de peticiones** en la autenticación y en los agentes.
 - **Cuentas verificadas:** correo y Telegram se confirman antes de activar la cuenta.
-- **Sesiones revocables:** el JWT dura 8 horas y deja de servir si cambian la contraseña, el MFA o
-  el rol. En el navegador vive en `sessionStorage`, que se borra al cerrar la pestaña.
+- **Sesiones revocables:** la sesión vence sola y deja de servir si cambian la contraseña, el MFA o
+  el rol; en el navegador se borra al cerrar la pestaña.
 - **Roles en el servidor:** N1, N2 y N3 se eligen al registrarse; el rol gestor solo lo aprueba el
   admin; todas las rutas de administración exigen rol admin; generar códigos de alta exige N2, N3 o
   admin. Nadie borra datos: solo se desactiva

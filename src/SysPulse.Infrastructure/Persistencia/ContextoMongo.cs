@@ -75,6 +75,9 @@ public sealed class ContextoMongo
 
         await Auditoria.Indexes.CreateOneAsync(
             new CreateIndexModel<AuditoriaDoc>(Builders<AuditoriaDoc>.IndexKeys.Descending(a => a.Ts), new CreateIndexOptions { Name = "ts" }), cancellationToken: ct).ConfigureAwait(false);
+        // Los eventos de auditoría se depuran a los 15 días, igual que en todo el portafolio.
+        await Auditoria.Indexes.CreateOneAsync(
+            new CreateIndexModel<AuditoriaDoc>(Builders<AuditoriaDoc>.IndexKeys.Ascending(a => a.Ts), new CreateIndexOptions { Name = "ttl_15d", ExpireAfter = TimeSpan.FromDays(15) }), cancellationToken: ct).ConfigureAwait(false);
 
         await Incidentes.Indexes.CreateManyAsync(
         [
