@@ -15,7 +15,7 @@ export function LayoutAcceso({ paso, titulo, subtitulo, children }: { paso?: str
       <aside className={s.marca}>
         <div className={s.logo}>
           <span className={s.punto} aria-hidden="true" />
-          SysPulse
+          Monitoreo e incidentes TI
         </div>
 
         <div className={s.mensaje}>
@@ -41,7 +41,7 @@ export function LayoutAcceso({ paso, titulo, subtitulo, children }: { paso?: str
           </ul>
         </div>
 
-        <p className={s.pie}>© {ANIO} SysPulse · Plataforma de operaciones TI</p>
+        <p className={s.pie}>© {ANIO} Monitoreo e incidentes TI · Plataforma de operaciones TI</p>
 
         <svg className={s.linea} viewBox="0 0 900 200" fill="none" aria-hidden="true">
           <path d="M0 120 H260 L300 40 L350 180 L395 80 L425 120 H900" stroke="var(--accent)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />

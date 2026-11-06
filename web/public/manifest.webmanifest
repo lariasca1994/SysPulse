@@ -1,6 +1,6 @@
 {
-  "name": "SysPulse",
-  "short_name": "SysPulse",
+  "name": "Monitoreo e incidentes TI",
+  "short_name": "Monitoreo TI",
   "description": "Operaciones de TI: monitoreo de hosts, incidentes ITIL y coordinación en tiempo real.",
   "lang": "es",
   "start_url": "/",

@@ -12,7 +12,7 @@ export function Mantenimiento() {
 
   useEffect(() => {
     if (!activo) return undefined;
-    document.title = "En mantenimiento · SysPulse";
+    document.title = "En mantenimiento · Monitoreo e incidentes TI";
     const intervalo = window.setInterval(async () => {
       try {
         const respuesta = await fetch(`${API_BASE}/health`, { cache: "no-store" });
@@ -31,7 +31,7 @@ export function Mantenimiento() {
       <section className={estilos.tarjeta} role="status" aria-live="polite">
         <div className={estilos.marca}>
           <span className={estilos.pulso} aria-hidden="true" />
-          SysPulse
+          Monitoreo e incidentes TI
         </div>
         <p className={estilos.etiqueta}>Servicio en pausa</p>
         <h1 className={estilos.titulo}>Estamos en mantenimiento</h1>

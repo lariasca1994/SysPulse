@@ -63,7 +63,7 @@ export default function Registro() {
   }
 
   return (
-    <LayoutAcceso paso="Crear cuenta" titulo="Únete a SysPulse" subtitulo="Tu cuenta queda activa al confirmar tu correo y tu Telegram.">
+    <LayoutAcceso paso="Crear cuenta" titulo="Crea tu cuenta" subtitulo="Tu cuenta queda activa al confirmar tu correo y tu Telegram.">
       <form className={s.formulario} onSubmit={enviar} noValidate>
         {general && <Alerta tipo="error">{general}</Alerta>}
 

@@ -65,7 +65,7 @@ export default function ConfigurarMfa() {
   }
 
   function descargar(codigos: string[]) {
-    const contenido = `Códigos de recuperación de SysPulse\nCada código sirve una sola vez si pierdes acceso a tu segundo factor.\n\n${codigos.join("\n")}\n`;
+    const contenido = `Códigos de recuperación de Monitoreo e incidentes TI\nCada código sirve una sola vez si pierdes acceso a tu segundo factor.\n\n${codigos.join("\n")}\n`;
     const url = URL.createObjectURL(new Blob([contenido], { type: "text/plain;charset=utf-8" }));
     const a = Object.assign(document.createElement("a"), { href: url, download: "syspulse-codigos-recuperacion.txt" });
     a.click();
@@ -115,7 +115,7 @@ export default function ConfigurarMfa() {
               navegar("/", { replace: true });
             }}
           >
-            Entrar a SysPulse
+            Entrar a la plataforma
           </Boton>
         </div>
       </LayoutAcceso>

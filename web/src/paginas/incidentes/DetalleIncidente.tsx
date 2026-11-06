@@ -244,7 +244,7 @@ function Entrada({ e, ahora }: { e: EntradaHistorial; ahora: number }) {
       <span className={d.icono} aria-hidden="true"><Icono size={14} /></span>
       <div className={d.cuerpo}>
         <p className={d.encabezadoEntrada}>
-          <strong>{e.usuario ?? (e.tipo === "sla" ? "SLA" : "SysPulse")}</strong>
+          <strong>{e.usuario ?? (e.tipo === "sla" ? "SLA" : "Sistema")}</strong>
           {resumen && <span> · {resumen}</span>}
           <time dateTime={e.ts} title={fechaHora(e.ts)}>{hace(e.ts, ahora)}</time>
         </p>

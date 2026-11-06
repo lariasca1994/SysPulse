@@ -12,7 +12,7 @@ import s from "./acceso.module.css";
 type Modo = "app" | "correo" | "recuperacion";
 
 const SUBTITULOS: Record<Modo, string> = {
-  app: "Abre tu app autenticadora y escribe el código de SysPulse.",
+  app: "Abre tu app autenticadora y escribe el código de 6 dígitos.",
   correo: "Escribe el código de 6 dígitos que te enviamos por correo.",
   recuperacion: "Escribe uno de tus códigos de recuperación. Cada uno sirve una sola vez.",
 };

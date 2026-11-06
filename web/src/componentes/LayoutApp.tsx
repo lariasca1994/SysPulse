@@ -48,7 +48,7 @@ export function LayoutApp() {
       <aside className={s.nav}>
         <div className={s.marca}>
           <span className={s.pulso} aria-hidden="true" />
-          <span className={s.marcaTexto}>SysPulse</span>
+          <span className={s.marcaTexto}>Monitoreo e incidentes TI</span>
         </div>
         <nav aria-label="Navegación principal">
           <ul className={s.menu}>
@@ -69,7 +69,7 @@ export function LayoutApp() {
         <header className={s.cabecera}>
           <div className={s.marcaMovil}>
             <span className={s.pulso} aria-hidden="true" />
-            SysPulse
+            Monitoreo TI
           </div>
           <div className={s.acciones}>
             {modo === "boton" && (
