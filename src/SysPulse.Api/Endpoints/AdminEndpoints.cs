@@ -86,7 +86,7 @@ public static class EquiposEndpoints
                 await chat.SistemaAsync(ServicioChat.Operaciones, r.Retirar ? $"🗄️ {nombre} fue retirado de la operación (su historial se conserva)." : $"♻️ {nombre} volvió a la operación.", ct);
                 // Correo solo al desactivar (retirar), y solo a los admins que no están conectados.
                 if (r.Retirar) cola.Encolar(SysPulse.Infrastructure.Notificaciones.Aviso.SoloCorreo($"equipo-{accion}", $"equipo:{id}:{accion}:{DateTime.UtcNow:yyyyMMddHHmm}",
-                    new SysPulse.Infrastructure.Notificaciones.ContenidoCorreo($"[SysPulse] Equipo {accion}: {nombre}", $"Equipo {accion}", r.Retirar ? "advertencia" : "ok",
+                    new SysPulse.Infrastructure.Notificaciones.ContenidoCorreo($"[Monitoreo e incidentes TI] Equipo {accion}: {nombre}", $"Equipo {accion}", r.Retirar ? "advertencia" : "ok",
                         [("Equipo", nombre), ("Por", u.FindFirstValue(JwtRegisteredClaimNames.Name) ?? "Admin")], $"{web.UrlWeb}/admin", "Ver los equipos"), admins: true));
             }
             return error is null ? Results.Ok(new { ok = true }) : Results.Problem(error, statusCode: 400);

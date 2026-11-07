@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Smartphone } from "lucide-react";
 import { auth, type MetodosMfa } from "../../api/auth";
 import { esFalla } from "../../api/cliente";
 import { useSesion } from "../../sesionContexto";
@@ -102,6 +102,9 @@ export default function VerificarMfa() {
             No tengo acceso a mi segundo factor: usar un código de recuperación
           </Boton>
         )}
+        <Link className={s.perdiAutenticador} to="/mfa/recuperar" state={{ token, metodos }}>
+          <Smartphone size={16} aria-hidden="true" /> Perdí mi autenticador
+        </Link>
       </form>
       <p className={s.alterno}>
         <Link to="/login">Volver al inicio de sesión</Link>

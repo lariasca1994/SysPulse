@@ -90,7 +90,7 @@ public sealed partial class ServicioAdmin(
         // Aviso al admin: en #operaciones (si está conectado lo ve ahí) y por correo solo si no está conectado.
         await chat.SistemaAsync(ServicioChat.Operaciones, $"📝 Hay una solicitud de rol gestor pendiente de revisión ({usuario.Rol}).", ct).ConfigureAwait(false);
         cola.Encolar(Aviso.SoloCorreo("gestor-solicitud", $"gestor:{usuario.Id}:{Ahora:yyyyMMddHHmm}", new ContenidoCorreo(
-            "[SysPulse] Solicitud de rol gestor", "Hay una solicitud de rol gestor pendiente", "info",
+            "[Monitoreo e incidentes TI] Solicitud de rol gestor", "Hay una solicitud de rol gestor pendiente", "info",
             [("Solicitante", usuario.Nombre), ("Nivel actual", usuario.Rol), ("Motivo", texto.Length > 300 ? texto[..300] + "…" : texto)],
             $"{opciones.UrlWeb}/admin", "Revisar la solicitud"), admins: true));
         return null;
@@ -124,8 +124,8 @@ public sealed partial class ServicioAdmin(
         if (usuario is not null)
         {
             var mensaje = aprobar
-                ? $"✅ SysPulse: tu solicitud de rol gestor fue aprobada por {adminNombre}. Vuelve a iniciar sesión para usar tus nuevos permisos."
-                : $"SysPulse: tu solicitud de rol gestor fue rechazada por {adminNombre}. Motivo: {comentario}";
+                ? $"✅ Monitoreo e incidentes TI: tu solicitud de rol gestor fue aprobada por {adminNombre}. Vuelve a iniciar sesión para usar tus nuevos permisos."
+                : $"Monitoreo e incidentes TI: tu solicitud de rol gestor fue rechazada por {adminNombre}. Motivo: {comentario}";
             await AvisarAsync(usuario, mensaje, ct).ConfigureAwait(false);
         }
         return null;
@@ -143,7 +143,7 @@ public sealed partial class ServicioAdmin(
         await mongo.SolicitudesRol.UpdateManyAsync(x => x.UsuarioId == id && x.Estado == "aprobada",
             Builders<SolicitudRolDoc>.Update.Set(x => x.Estado, "revocada"), cancellationToken: ct).ConfigureAwait(false);
         await auditoria.RegistrarAsync("admin.gestor_revocado", adminId, null, $"vuelve a {nivel}", "usuario", usuarioId, ct).ConfigureAwait(false);
-        await AvisarAsync(u, $"SysPulse: el administrador revocó tu rol gestor. Vuelves a tu nivel {nivel}.", ct).ConfigureAwait(false);
+        await AvisarAsync(u, $"Monitoreo e incidentes TI: el administrador revocó tu rol gestor. Vuelves a tu nivel {nivel}.", ct).ConfigureAwait(false);
         return null;
     }
 

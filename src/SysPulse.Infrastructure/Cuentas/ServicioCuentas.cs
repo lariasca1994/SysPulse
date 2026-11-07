@@ -174,7 +174,7 @@ public sealed class ServicioCuentas(
                 .FirstOrDefaultAsync(ct).ConfigureAwait(false);
             if (v is null)
             {
-                await telegram.EnviarAsync(chatId, "Este enlace de verificación no es válido o ya venció. Pide uno nuevo desde SysPulse.", ct: ct).ConfigureAwait(false);
+                await telegram.EnviarAsync(chatId, "Este enlace de verificación no es válido o ya venció. Pide uno nuevo desde Monitoreo e incidentes TI.", ct: ct).ConfigureAwait(false);
                 return;
             }
             var usuario = await db.Usuarios.Find(u => u.Id == v.UsuarioId).FirstOrDefaultAsync(ct).ConfigureAwait(false);
@@ -186,7 +186,7 @@ public sealed class ServicioCuentas(
             {
                 if (!ReglasRegistro.CoincideUsuario(usuario.Telegram.Usuario, mensaje.De?.Usuario))
                 {
-                    await telegram.EnviarAsync(chatId, $"Tu cuenta de Telegram no coincide con @{usuario.Telegram.Usuario}, que es la que registraste en SysPulse. Inicia el bot desde esa cuenta o corrige tu @usuario.", ct: ct).ConfigureAwait(false);
+                    await telegram.EnviarAsync(chatId, $"Tu cuenta de Telegram no coincide con @{usuario.Telegram.Usuario}, que es la que registraste en Monitoreo e incidentes TI. Inicia el bot desde esa cuenta o corrige tu @usuario.", ct: ct).ConfigureAwait(false);
                     return;
                 }
                 await EnviarCodigoAsync(v.Id, chatId, ct).ConfigureAwait(false);
@@ -210,14 +210,14 @@ public sealed class ServicioCuentas(
             var coincide = ReglasRegistro.CoincideTelefono(cifrado.Descifrar(usuario.Telegram.TelefonoCifrado), mensaje.Contacto.Telefono);
             if (!esPropio || !coincide)
             {
-                await telegram.EnviarAsync(chatId, "Ese número no coincide con el que registraste en SysPulse. Comparte el número de esta cuenta de Telegram.", quitarTeclado: true, ct: ct).ConfigureAwait(false);
+                await telegram.EnviarAsync(chatId, "Ese número no coincide con el que registraste en Monitoreo e incidentes TI. Comparte el número de esta cuenta de Telegram.", quitarTeclado: true, ct: ct).ConfigureAwait(false);
                 return;
             }
             await EnviarCodigoAsync(v.Id, chatId, ct).ConfigureAwait(false);
             return;
         }
 
-        await telegram.EnviarAsync(chatId, "Hola, soy el bot de SysPulse. Para vincular tu cuenta, usa el enlace «Verificar en Telegram» que aparece al registrarte.", ct: ct).ConfigureAwait(false);
+        await telegram.EnviarAsync(chatId, "Hola, soy el bot de Monitoreo e incidentes TI. Para vincular tu cuenta, usa el enlace «Verificar en Telegram» que aparece al registrarte.", ct: ct).ConfigureAwait(false);
     }
 
     private async Task EnviarCodigoAsync(ObjectId verificacionId, long chatId, CancellationToken ct)
@@ -226,7 +226,7 @@ public sealed class ServicioCuentas(
         if (v is null) return;
         if (v.CodigosEnviados >= MaxCodigosTelegram)
         {
-            await telegram.EnviarAsync(chatId, "Se alcanzó el máximo de códigos. Pide un nuevo enlace desde SysPulse.", quitarTeclado: true, ct: ct).ConfigureAwait(false);
+            await telegram.EnviarAsync(chatId, "Se alcanzó el máximo de códigos. Pide un nuevo enlace desde Monitoreo e incidentes TI.", quitarTeclado: true, ct: ct).ConfigureAwait(false);
             return;
         }
         var codigo = Cifrado.Codigo6();
@@ -236,7 +236,7 @@ public sealed class ServicioCuentas(
             .Set(x => x.Intentos, 0)
             .Inc(x => x.CodigosEnviados, 1)
             .Set(x => x.Expira, DateTime.UtcNow + VigenciaCodigoTelegram), cancellationToken: ct).ConfigureAwait(false);
-        await telegram.EnviarAsync(chatId, $"Tu código de verificación de SysPulse es: {codigo}\nVence en 10 minutos. No lo compartas con nadie.", quitarTeclado: true, ct: ct).ConfigureAwait(false);
+        await telegram.EnviarAsync(chatId, $"Tu código de verificación de Monitoreo e incidentes TI es: {codigo}\nVence en 10 minutos. No lo compartas con nadie.", quitarTeclado: true, ct: ct).ConfigureAwait(false);
     }
 
     public async Task<string?> ConfirmarTelegramAsync(string usuarioId, string? codigo, string? ip, CancellationToken ct)
@@ -262,7 +262,7 @@ public sealed class ServicioCuentas(
             .Set(u => u.Telegram.VerificadoEn, DateTime.UtcNow), cancellationToken: ct).ConfigureAwait(false);
         await db.Verificaciones.DeleteOneAsync(x => x.Id == v.Id, ct).ConfigureAwait(false);
         await auditoria.RegistrarAsync("cuenta.telegram_verificado", id, ip, ct: ct).ConfigureAwait(false);
-        await telegram.EnviarAsync(v.ChatId.Value, "✅ Listo: tu Telegram quedó vinculado a SysPulse. Aquí recibirás los avisos de tu nivel.", ct: ct).ConfigureAwait(false);
+        await telegram.EnviarAsync(v.ChatId.Value, "✅ Listo: tu Telegram quedó vinculado a Monitoreo e incidentes TI. Aquí recibirás los avisos de tu nivel.", ct: ct).ConfigureAwait(false);
         return null;
     }
 
@@ -344,9 +344,7 @@ public sealed class ServicioCuentas(
     {
         ArgumentNullException.ThrowIfNull(usuario);
         var ahora = DateTime.UtcNow;
-        var recientes = usuario.Mfa.EnviosCorreo.Where(e => ahora - e < VigenciaCodigoCorreo).ToList();
-        if (recientes.Count >= MaxEnviosCorreo) return false;
-        recientes.Add(ahora);
+        if (EnviosPermitidos(usuario.Mfa.EnviosCorreo, ahora, VigenciaCodigoCorreo, MaxEnviosCorreo) is not { } recientes) return false;
 
         var codigo = Cifrado.Codigo6();
         await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
@@ -404,10 +402,9 @@ public sealed class ServicioCuentas(
 
     private async Task<ResultadoCodigo> ComprobarCorreoAsync(UsuarioDoc actual, string? codigo, CancellationToken ct)
     {
-        if (actual.Mfa.CodigoCorreoHash is null || actual.Mfa.CodigoCorreoExpira < DateTime.UtcNow || actual.Mfa.CodigoCorreoIntentos >= MaxIntentosCodigo)
-            return ResultadoCodigo.Vencido;
-        var limpio = codigo?.Trim() ?? "";
-        if (limpio.Length == 6 && Cifrado.IgualesTiempoConstante(actual.Mfa.CodigoCorreoHash, Cifrado.Hash(limpio)))
+        var evaluado = EvaluarCodigoCorreo(actual.Mfa.CodigoCorreoHash, actual.Mfa.CodigoCorreoExpira, actual.Mfa.CodigoCorreoIntentos, codigo, DateTime.UtcNow);
+        if (evaluado == ResultadoCodigo.Vencido) return evaluado;
+        if (evaluado == ResultadoCodigo.Correcto)
         {
             // Condición sobre la huella: dos peticiones simultáneas con el mismo código no pasan ambas.
             var r = await db.Usuarios.UpdateOneAsync(u => u.Id == actual.Id && u.Mfa.CodigoCorreoHash == actual.Mfa.CodigoCorreoHash,
@@ -418,6 +415,111 @@ public sealed class ServicioCuentas(
         await db.Usuarios.UpdateOneAsync(u => u.Id == actual.Id, Builders<UsuarioDoc>.Update.Inc(u => u.Mfa.CodigoCorreoIntentos, 1),
             cancellationToken: ct).ConfigureAwait(false);
         return ResultadoCodigo.Incorrecto;
+    }
+
+    /// <summary>
+    /// Envíos dentro de la ventana más el nuevo, o null si ya se alcanzó el máximo (límite de envíos de códigos).
+    /// </summary>
+    public static List<DateTime>? EnviosPermitidos(IEnumerable<DateTime> envios, DateTime ahora, TimeSpan ventana, int maximo)
+    {
+        ArgumentNullException.ThrowIfNull(envios);
+        var recientes = envios.Where(e => ahora - e < ventana).ToList();
+        if (recientes.Count >= maximo) return null;
+        recientes.Add(ahora);
+        return recientes;
+    }
+
+    /// <summary>Evalúa un código de 6 dígitos enviado por correo contra su huella, vigencia e intentos.</summary>
+    public static ResultadoCodigo EvaluarCodigoCorreo(string? hash, DateTime? expira, int intentos, string? codigo, DateTime ahora)
+    {
+        if (hash is null || expira is null || expira < ahora || intentos >= MaxIntentosCodigo) return ResultadoCodigo.Vencido;
+        var limpio = codigo?.Trim() ?? "";
+        return limpio.Length == 6 && Cifrado.IgualesTiempoConstante(hash, Cifrado.Hash(limpio)) ? ResultadoCodigo.Correcto : ResultadoCodigo.Incorrecto;
+    }
+
+    // ───────────── "Perdí mi autenticador" ─────────────
+
+    public static readonly TimeSpan VigenciaRecuperacionMfa = TimeSpan.FromMinutes(15);
+    private const int MaxEnviosRecuperacion = 3;
+
+    /// <summary>
+    /// Envía un código de 6 dígitos al correo de la cuenta aunque el método correo no esté activo (el usuario ya
+    /// superó la contraseña). False si se alcanzó el límite de envíos.
+    /// </summary>
+    public async Task<bool> EnviarCodigoRecuperacionMfaAsync(UsuarioDoc usuario, string? ip, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(usuario);
+        var ahora = DateTime.UtcNow;
+        if (EnviosPermitidos(usuario.Mfa.EnviosRecuperacion, ahora, VigenciaRecuperacionMfa, MaxEnviosRecuperacion) is not { } recientes)
+        {
+            await auditoria.RegistrarAsync("cuenta.mfa_recuperacion_limite", usuario.Id, ip, ct: ct).ConfigureAwait(false);
+            return false;
+        }
+
+        var codigo = Cifrado.Codigo6();
+        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
+            .Set(u => u.Mfa.RecuperacionHash, Cifrado.Hash(codigo))
+            .Set(u => u.Mfa.RecuperacionExpira, ahora + VigenciaRecuperacionMfa)
+            .Set(u => u.Mfa.RecuperacionIntentos, 0)
+            .Set(u => u.Mfa.EnviosRecuperacion, recientes), cancellationToken: ct).ConfigureAwait(false);
+        var (asunto, html, texto) = PlantillasCorreo.CodigoRecuperacionMfa(usuario.Nombre, codigo);
+        await correo.EnviarAsync(usuario.Email, asunto, html, texto, ct).ConfigureAwait(false);
+        await auditoria.RegistrarAsync("cuenta.mfa_recuperacion_solicitada", usuario.Id, ip, ct: ct).ConfigureAwait(false);
+        return true;
+    }
+
+    /// <summary>
+    /// Comprueba el código de "Perdí mi autenticador". Cuenta en el mismo bloqueo del segundo factor; un acierto
+    /// consume el código y solo habilita configurar un autenticador nuevo (no da sesión por sí solo).
+    /// </summary>
+    public async Task<ResultadoCodigo> ComprobarCodigoRecuperacionMfaAsync(UsuarioDoc usuario, string? codigo, string? ip, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(usuario);
+        var actual = await db.Usuarios.Find(u => u.Id == usuario.Id).FirstOrDefaultAsync(ct).ConfigureAwait(false);
+        if (actual is null) return ResultadoCodigo.Incorrecto;
+        if (actual.Mfa.BloqueoHasta > DateTime.UtcNow) return ResultadoCodigo.Bloqueado;
+
+        var resultado = EvaluarCodigoCorreo(actual.Mfa.RecuperacionHash, actual.Mfa.RecuperacionExpira, actual.Mfa.RecuperacionIntentos, codigo, DateTime.UtcNow);
+        if (resultado == ResultadoCodigo.Vencido) return resultado;
+        if (resultado == ResultadoCodigo.Correcto)
+        {
+            // Condición sobre la huella: un solo uso aunque lleguen dos peticiones a la vez.
+            var r = await db.Usuarios.UpdateOneAsync(u => u.Id == actual.Id && u.Mfa.RecuperacionHash == actual.Mfa.RecuperacionHash,
+                Builders<UsuarioDoc>.Update.Set(u => u.Mfa.RecuperacionHash, null).Set(u => u.Mfa.RecuperacionExpira, null)
+                    .Set(u => u.Mfa.Fallos, 0).Set(u => u.Mfa.BloqueoHasta, null),
+                cancellationToken: ct).ConfigureAwait(false);
+            if (r.ModifiedCount != 1) return ResultadoCodigo.Vencido;
+            await auditoria.RegistrarAsync("cuenta.mfa_recuperacion_ok", usuario.Id, ip, ct: ct).ConfigureAwait(false);
+            return ResultadoCodigo.Correcto;
+        }
+
+        var fallos = actual.Mfa.Fallos + 1;
+        var bloqueo = fallos >= MaxFallosMfa ? DateTime.UtcNow + DuracionBloqueo : (DateTime?)null;
+        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
+            .Inc(u => u.Mfa.RecuperacionIntentos, 1)
+            .Set(u => u.Mfa.Fallos, bloqueo is null ? fallos : 0).Set(u => u.Mfa.BloqueoHasta, bloqueo),
+            cancellationToken: ct).ConfigureAwait(false);
+        await auditoria.RegistrarAsync(bloqueo is null ? "cuenta.mfa_recuperacion_fallida" : "cuenta.mfa_recuperacion_bloqueada", usuario.Id, ip, ct: ct).ConfigureAwait(false);
+        return bloqueo is not null ? ResultadoCodigo.Bloqueado : ResultadoCodigo.Incorrecto;
+    }
+
+    /// <summary>
+    /// Tras "Perdí mi autenticador": genera el secreto del autenticador nuevo (pendiente hasta confirmarlo con
+    /// ConfirmarCambioMfaAsync, que entrega códigos de recuperación nuevos y cierra las demás sesiones).
+    /// </summary>
+    public async Task<ConfiguracionMfa> IniciarReconfiguracionMfaAsync(UsuarioDoc usuario, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(usuario);
+        return await SecretoPendienteAsync(usuario, ct).ConfigureAwait(false);
+    }
+
+    private async Task<ConfiguracionMfa> SecretoPendienteAsync(UsuarioDoc usuario, CancellationToken ct)
+    {
+        var secreto = Mfa.NuevoSecreto();
+        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
+            .Set(u => u.Mfa.SecretoPendienteCifrado, cifrado.Cifrar(secreto))
+            .Set(u => u.Mfa.PendienteExpira, DateTime.UtcNow.AddMinutes(10)), cancellationToken: ct).ConfigureAwait(false);
+        return new ConfiguracionMfa(secreto, Mfa.UriConfiguracion(secreto, usuario.Email));
     }
 
     /// <summary>
@@ -511,15 +613,14 @@ public sealed class ServicioCuentas(
         if (!await VerificarMfaAsync(usuario, codigo, ip, ct, "mfa_cambio").ConfigureAwait(false))
             return (null, "El código actual no es correcto.");
 
-        var secreto = Mfa.NuevoSecreto();
-        await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, Builders<UsuarioDoc>.Update
-            .Set(u => u.Mfa.SecretoPendienteCifrado, cifrado.Cifrar(secreto))
-            .Set(u => u.Mfa.PendienteExpira, DateTime.UtcNow.AddMinutes(10)), cancellationToken: ct).ConfigureAwait(false);
-        return (new ConfiguracionMfa(secreto, Mfa.UriConfiguracion(secreto, usuario.Email)), null);
+        return (await SecretoPendienteAsync(usuario, ct).ConfigureAwait(false), null);
     }
 
-    /// <summary>Confirma la app nueva: reemplaza el secreto, genera códigos de recuperación nuevos y cierra las demás sesiones.</summary>
-    public async Task<(IReadOnlyList<string>? Codigos, string? Error)> ConfirmarCambioMfaAsync(UsuarioDoc usuario, string? codigo, string? ip, CancellationToken ct)
+    /// <summary>
+    /// Confirma la app nueva (cambio desde Mi cuenta o tras "Perdí mi autenticador"): reemplaza el secreto, genera
+    /// códigos de recuperación nuevos y cierra las demás sesiones.
+    /// </summary>
+    public async Task<(IReadOnlyList<string>? Codigos, string? Error)> ConfirmarCambioMfaAsync(UsuarioDoc usuario, string? codigo, string? ip, CancellationToken ct, string evento = "cuenta.mfa_cambiado")
     {
         ArgumentNullException.ThrowIfNull(usuario);
         var actual = await db.Usuarios.Find(u => u.Id == usuario.Id).FirstOrDefaultAsync(ct).ConfigureAwait(false);
@@ -538,13 +639,13 @@ public sealed class ServicioCuentas(
             .Set(u => u.Mfa.UltimoPaso, paso.Value)
             .Set(u => u.Mfa.CodigosRecuperacionHash, recuperacion.Select(c => Cifrado.Hash(Mfa.NormalizarCodigoRecuperacion(c))).ToList())
             .Set(u => u.SelloSeguridad, Guid.NewGuid().ToString("N")), cancellationToken: ct).ConfigureAwait(false);
-        await auditoria.RegistrarAsync("cuenta.mfa_cambiado", usuario.Id, ip, ct: ct).ConfigureAwait(false);
+        await auditoria.RegistrarAsync(evento, usuario.Id, ip, ct: ct).ConfigureAwait(false);
         if (usuario.Telegram is { Verificado: true, ChatId: { } chat })
         {
             try
             {
                 await telegram.EnviarAsync(chat,
-                    $"🔐 SysPulse: se configuró una app autenticadora nueva en tu cuenta ({DateTime.UtcNow:dd/MM HH:mm} UTC). La anterior ya no sirve y se cerraron las demás sesiones.\nSi no fuiste tú, avisa al administrador de inmediato.",
+                    $"🔐 Monitoreo e incidentes TI: se configuró una app autenticadora nueva en tu cuenta ({DateTime.UtcNow:dd/MM HH:mm} UTC). La anterior ya no sirve y se cerraron las demás sesiones.\nSi no fuiste tú, avisa al administrador de inmediato.",
                     ct: ct).ConfigureAwait(false);
             }
             catch (HttpRequestException)
@@ -649,11 +750,19 @@ public sealed class ServicioCuentas(
         return correo.EnviaDeVerdad ? null : enlace;
     }
 
+    /// <summary>Valida la contraseña nueva del restablecimiento y su confirmación (si se envía).</summary>
+    public static string? ValidarNuevaPassword(string? nueva, string? confirmacion, string email)
+    {
+        if (ReglasRegistro.ValidarPassword(nueva, email) is { } error) return error;
+        return confirmacion is not null && !string.Equals(nueva, confirmacion, StringComparison.Ordinal) ? "Las contraseñas no coinciden." : null;
+    }
+
     /// <summary>
-    /// Restablece con el enlace del correo y, si la cuenta tiene MFA, el código de la app autenticadora (o uno de
-    /// recuperación): quien solo acceda al correo no puede tomar la cuenta. Desbloquea la cuenta y cierra sesiones.
+    /// Restablece con el enlace del correo: solo contraseña nueva y su confirmación. El enlace es de un solo uso
+    /// (se consume de forma atómica); se cierran todas las sesiones y el segundo factor sigue activo, así que
+    /// quien solo acceda al correo no puede entrar sin él.
     /// </summary>
-    public async Task<string?> RestablecerPasswordAsync(string? token, string? nueva, string? codigo, string? ip, CancellationToken ct)
+    public async Task<string?> RestablecerPasswordAsync(string? token, string? nueva, string? confirmacion, string? ip, CancellationToken ct)
     {
         const string Invalido = "El enlace no es válido o ya venció. Solicita uno nuevo.";
         if (string.IsNullOrWhiteSpace(token)) return Invalido;
@@ -663,19 +772,12 @@ public sealed class ServicioCuentas(
         if (v is null) return Invalido;
         var usuario = await db.Usuarios.Find(u => u.Id == v.UsuarioId && u.Activo).FirstOrDefaultAsync(ct).ConfigureAwait(false);
         if (usuario is null) return Invalido;
-        if (v.Intentos >= MaxIntentosCodigo)
-        {
-            await db.Verificaciones.DeleteOneAsync(x => x.Id == v.Id, ct).ConfigureAwait(false);
-            return "Demasiados intentos con este enlace. Solicita uno nuevo.";
-        }
 
-        if (ReglasRegistro.ValidarPassword(nueva, usuario.Email) is { } error) return error;
-        if (usuario.Mfa.Activo && !await VerificarMfaAsync(usuario, codigo, ip, ct, "restablecer").ConfigureAwait(false))
-        {
-            await db.Verificaciones.UpdateOneAsync(x => x.Id == v.Id, Builders<VerificacionDoc>.Update.Inc(x => x.Intentos, 1), cancellationToken: ct).ConfigureAwait(false);
-            return "El código de tu app autenticadora no es correcto.";
-        }
+        // Un error de validación no consume el enlace: la persona corrige y vuelve a intentar.
+        if (ValidarNuevaPassword(nueva, confirmacion, usuario.Email) is { } error) return error;
 
+        // Consumo atómico: dos envíos simultáneos con el mismo enlace no pasan ambos.
+        if (await db.Verificaciones.FindOneAndDeleteAsync(x => x.Id == v.Id, cancellationToken: ct).ConfigureAwait(false) is null) return Invalido;
         await db.Verificaciones.DeleteManyAsync(x => x.UsuarioId == usuario.Id && x.Tipo == TipoVerificacion.Restablecer, ct).ConfigureAwait(false);
         await GuardarPasswordAsync(usuario, nueva!, ct, desbloquear: true).ConfigureAwait(false);
         await auditoria.RegistrarAsync("cuenta.password_restablecida", usuario.Id, ip, ct: ct).ConfigureAwait(false);
@@ -700,7 +802,7 @@ public sealed class ServicioCuentas(
         try
         {
             await telegram.EnviarAsync(chat,
-                $"🔐 SysPulse: la contraseña de tu cuenta se cambió ({DateTime.UtcNow:dd/MM HH:mm} UTC). Se cerraron las demás sesiones.\nSi no fuiste tú, avisa al administrador de inmediato.",
+                $"🔐 Monitoreo e incidentes TI: la contraseña de tu cuenta se cambió ({DateTime.UtcNow:dd/MM HH:mm} UTC). Se cerraron las demás sesiones.\nSi no fuiste tú, avisa al administrador de inmediato.",
                 ct: ct).ConfigureAwait(false);
         }
         catch (HttpRequestException)

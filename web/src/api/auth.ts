@@ -67,6 +67,13 @@ export const auth = {
     post<{ codigosRecuperacion: string[]; sesion: Sesion }>("/api/auth/mfa/cambiar/confirmar", { codigo }, token),
   olvidePassword: (email: string) =>
     post<{ mensaje: string; enlaceDesarrollo: string | null }>("/api/auth/password/olvide", { email }),
-  restablecerPassword: (token: string, nueva: string, codigo: string) =>
-    post<{ mensaje: string }>("/api/auth/password/restablecer", { token, nueva, codigo }),
+  restablecerPassword: (token: string, nueva: string, confirmacion: string) =>
+    post<{ mensaje: string }>("/api/auth/password/restablecer", { token, nueva, confirmacion }),
+  // "Perdí mi autenticador": código al correo → configurar un autenticador nuevo → códigos de recuperación nuevos.
+  recuperarMfaEnviar: (token: string) => post<{ mensaje: string; token: string }>("/api/auth/mfa/recuperar/enviar", { token }),
+  recuperarMfaVerificar: (token: string, codigo: string) =>
+    post<{ paso: "reconfigurar-mfa"; token: string }>("/api/auth/mfa/recuperar/verificar", { token, codigo }),
+  recuperarMfaIniciar: (token: string) => post<{ secreto: string; uri: string }>("/api/auth/mfa/recuperar/iniciar", { token }),
+  recuperarMfaConfirmar: (token: string, codigo: string) =>
+    post<{ codigosRecuperacion: string[]; sesion: Sesion }>("/api/auth/mfa/recuperar/confirmar", { token, codigo }),
 };

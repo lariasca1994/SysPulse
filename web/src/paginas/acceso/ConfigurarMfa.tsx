@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 import QRCode from "qrcode";
 import { Check, Copy, Download, Mail, Smartphone } from "lucide-react";
@@ -13,12 +13,15 @@ import s from "./acceso.module.css";
 /**
  * Configurar el segundo factor (obligatorio): se elige app autenticadora o código por correo, se confirma con el
  * primer código y se muestran los códigos de recuperación (una sola vez). El otro método se agrega desde Mi cuenta.
+ * Con `reconfigurar` (tras "Perdí mi autenticador") va directo al QR del autenticador nuevo y entrega códigos nuevos.
  */
 export default function ConfigurarMfa() {
   const navegar = useNavigate();
   const { iniciar } = useSesion();
-  const token = (useLocation().state as { token?: string } | null)?.token;
-  const [metodo, setMetodo] = useState<"app" | "correo" | null>(null);
+  const estado = useLocation().state as { token?: string; reconfigurar?: boolean } | null;
+  const token = estado?.token;
+  const reconfigurar = estado?.reconfigurar === true;
+  const [metodo, setMetodo] = useState<"app" | "correo" | null>(reconfigurar ? "app" : null);
   const [secreto, setSecreto] = useState("");
   const [qr, setQr] = useState("");
   const [aviso, setAviso] = useState<string | null>(null);
@@ -28,6 +31,15 @@ export default function ConfigurarMfa() {
   const [resultado, setResultado] = useState<{ codigos: string[]; sesion: Sesion } | null>(null);
   const [guardados, setGuardados] = useState(false);
   const [copiado, setCopiado] = useState<"secreto" | "codigos" | null>(null);
+  const iniciado = useRef(false);
+
+  // Tras "Perdí mi autenticador" no hay elección de método: se genera de una vez el QR del autenticador nuevo.
+  useEffect(() => {
+    if (!token || !reconfigurar || iniciado.current) return;
+    iniciado.current = true;
+    void elegirApp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, reconfigurar]);
 
   if (!token) return <Navigate to="/login" replace />;
 
@@ -35,7 +47,7 @@ export default function ConfigurarMfa() {
     setMetodo("app");
     setError(null);
     try {
-      const r = await auth.iniciarMfa(token!);
+      const r = reconfigurar ? await auth.recuperarMfaIniciar(token!) : await auth.iniciarMfa(token!);
       setSecreto(r.secreto);
       setQr(await QRCode.toDataURL(r.uri, { margin: 1, width: 368, color: { dark: "#0B1F3A", light: "#FFFFFF" } }));
     } catch (e) {
@@ -67,7 +79,7 @@ export default function ConfigurarMfa() {
   function descargar(codigos: string[]) {
     const contenido = `Códigos de recuperación de Monitoreo e incidentes TI\nCada código sirve una sola vez si pierdes acceso a tu segundo factor.\n\n${codigos.join("\n")}\n`;
     const url = URL.createObjectURL(new Blob([contenido], { type: "text/plain;charset=utf-8" }));
-    const a = Object.assign(document.createElement("a"), { href: url, download: "syspulse-codigos-recuperacion.txt" });
+    const a = Object.assign(document.createElement("a"), { href: url, download: "codigos-recuperacion-monitoreo-ti.txt" });
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -77,7 +89,9 @@ export default function ConfigurarMfa() {
     setError(null);
     setCargando(true);
     try {
-      const r = metodo === "correo" ? await auth.activarCorreo(token!, codigo) : await auth.activarMfa(token!, codigo);
+      const r = reconfigurar
+        ? await auth.recuperarMfaConfirmar(token!, codigo)
+        : metodo === "correo" ? await auth.activarCorreo(token!, codigo) : await auth.activarMfa(token!, codigo);
       setResultado({ codigos: r.codigosRecuperacion, sesion: r.sesion });
     } catch (err) {
       setError(esFalla(err) ? err.detalle.mensaje : "No se pudo activar.");
@@ -159,7 +173,11 @@ export default function ConfigurarMfa() {
   }
 
   return (
-    <LayoutAcceso paso="Segundo factor" titulo="Activa tu app autenticadora" subtitulo="Usa Google Authenticator, Microsoft Authenticator, Authy u otra app compatible.">
+    <LayoutAcceso paso={reconfigurar ? "Perdí mi autenticador" : "Segundo factor"}
+      titulo={reconfigurar ? "Configura tu autenticador nuevo" : "Activa tu app autenticadora"}
+      subtitulo={reconfigurar
+        ? "Escanea el código QR con la app del teléfono nuevo. El autenticador anterior dejará de servir."
+        : "Usa Google Authenticator, Microsoft Authenticator, Authy u otra app compatible."}>
       <ol className={s.pasos}>
         <li><span>Abre tu app y elige <strong>agregar cuenta → escanear código QR</strong>.</span></li>
         <li><span>Escribe el <strong>código de 6 dígitos</strong> que muestra la app.</span></li>
@@ -183,7 +201,7 @@ export default function ConfigurarMfa() {
         {error && <Alerta tipo="error">{error}</Alerta>}
         <CampoCodigo etiqueta="Código de la app" value={codigo} onChange={setCodigo} />
         <Boton type="submit" ancho cargando={cargando} disabled={codigo.length !== 6 || !secreto}>Activar</Boton>
-        {volver}
+        {!reconfigurar && volver}
       </form>
     </LayoutAcceso>
   );

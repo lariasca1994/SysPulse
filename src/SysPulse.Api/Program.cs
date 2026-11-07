@@ -35,7 +35,7 @@ builder.Services.AddSingleton<Auditoria>();
 
 builder.Services.AddHttpClient<ClienteTelegram>().AddTypedClient((http, _) => new ClienteTelegram(http, config["TELEGRAM_BOT_TOKEN"]));
 builder.Services.AddHttpClient<ServicioCorreo>().AddTypedClient((http, sp) => new ServicioCorreo(http,
-    new OpcionesCorreo(config["BREVO_API_KEY"], config["BREVO_SENDER_EMAIL"], config["BREVO_SENDER_NAME"] ?? "SysPulse",
+    new OpcionesCorreo(config["BREVO_API_KEY"], config["BREVO_SENDER_EMAIL"], SysPulse.Infrastructure.Correo.PlantillasCorreo.NombreRemitente(config["BREVO_SENDER_NAME"]),
         EnviarDeVerdad: string.Equals(config["CORREO_ENVIAR"], "true", StringComparison.OrdinalIgnoreCase)),
     sp.GetRequiredService<ILogger<ServicioCorreo>>()));
 

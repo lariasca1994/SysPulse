@@ -5,6 +5,9 @@ protege la plataforma. Para la arquitectura y la instalación vuelve al [README]
 
 **Demo:** [syspulse.vercel.app](https://syspulse.vercel.app)
 
+> En la web, en los correos, en los avisos de Telegram y en tu app autenticadora el portal aparece
+> con su nombre descriptivo: **Monitoreo e incidentes TI**.
+
 ## Contenido
 
 1. [Proyecto: objetivos y alcances](#1-proyecto-objetivos-y-alcances)
@@ -36,8 +39,9 @@ un incidente con prioridad y SLA, avisa por Telegram y correo al nivel de soport
 
 ### Límites
 
-- Guarda los códigos de recuperación fuera del teléfono: sin tu segundo factor (app o correo) y sin
-  esos códigos no podrás entrar.
+- Guarda los códigos de recuperación fuera del teléfono. Si pierdes el autenticador y no los
+  tienes, **Perdí mi autenticador** te deja configurar uno nuevo con un código enviado a tu correo
+  (ver 4.1): sin acceso a tu correo no podrás recuperarlo.
 - Los avisos de Telegram llegan a tu cuenta personal: no reenvíes capturas de incidentes fuera del
   equipo.
 - Instala el agente solo en equipos de los que seas responsable.
@@ -115,9 +119,34 @@ Qué servicio de nube, base de datos o API usa el proyecto y para qué sirve cad
 | **App autenticadora** (recomendado) | Escaneas el QR con Google Authenticator, Microsoft Authenticator u otra app; la app muestra un código nuevo cada 30 segundos, incluso sin internet. Si no puedes escanear, escribe la clave que aparece bajo el QR. |
 | **Código por correo** | Cada vez que ingresas te llega un código de 6 dígitos que vence en 10 minutos y sirve una sola vez. Puedes pedir hasta 3 códigos cada 10 minutos (**Enviar un código nuevo**). |
 
-Escribe el primer código, pulsa **Activar** y **guarda los 10 códigos de recuperación**. En los
-siguientes ingresos escribe el código y pulsa **Verificar**; si tienes los dos métodos, la pantalla
-ofrece usar el otro, y siempre puedes usar un código de recuperación.
+Escribe el primer código, pulsa **Activar** y **guarda los 10 códigos de recuperación**. En la app
+autenticadora la cuenta aparece como **Monitoreo e incidentes TI** (las cuentas que ya tenías
+configuradas siguen funcionando igual, aunque muestren el nombre anterior).
+
+![Paso del segundo factor con el enlace Perdí mi autenticador](img/manual/13-segundo-factor.png)
+
+| # | Campo | Qué hacer |
+|:-:|---|---|
+| 1 | Código de 6 dígitos | El código de tu app (o del correo, si es tu método) |
+| 2 | Verificar | Entra a la plataforma |
+| 3 | Código de recuperación | Si no tienes tu segundo factor, usa uno de tus códigos guardados (cada uno sirve una vez) |
+| 4 | Perdí mi autenticador | Siempre visible: configura un autenticador nuevo con un código enviado a tu correo |
+
+Si tienes los dos métodos, la pantalla ofrece usar el otro.
+
+**Perdí mi autenticador.** Sirve aunque nunca hayas activado el código por correo:
+
+![Perdí mi autenticador: envío del código al correo](img/manual/15-perdi-autenticador.png)
+
+| # | Paso | Qué pasa |
+|:-:|---|---|
+| 1 | Enviar código a mi correo | Llega un código de 6 dígitos al correo de tu cuenta; vence en 15 minutos y sirve una vez. Si no llega, **Enviar un código nuevo** (hay un límite de envíos) |
+| 2 | Volver | Si aún tienes un código de recuperación, puedes usarlo en lugar de este flujo |
+
+Con el código correcto pasas directo a **Configura tu autenticador nuevo**: escanea el QR con la
+app del teléfono nuevo, escribe su primer código y pulsa **Activar**. Recibes **10 códigos de
+recuperación nuevos** (los anteriores dejan de servir), el autenticador anterior deja de funcionar,
+se cierran tus otras sesiones y te llega un aviso por Telegram.
 
 ### 4.2 Crear una cuenta
 
@@ -145,10 +174,22 @@ administrador.
 | # | Campo | Qué escribir |
 |:-:|---|---|
 | 1 | Correo | El correo de tu cuenta |
-| 2 | Botón | Envía el enlace de restablecimiento |
+| 2 | Enviar enlace | Envía el enlace de restablecimiento |
 
-Al abrir el enlace, además de la contraseña nueva se pide el **código de tu app autenticadora**:
-quien solo tenga acceso a tu correo no puede cambiarla.
+La respuesta es la misma exista o no la cuenta (no revela qué correos están registrados). El
+enlace llega por correo, vence en 1 hora y sirve una sola vez. Al abrirlo:
+
+![Crear una contraseña nueva](img/manual/14-restablecer.png)
+
+| # | Campo | Qué escribir |
+|:-:|---|---|
+| 1 | Nueva contraseña | Mínimo **12 caracteres**; el medidor indica su fuerza |
+| 2 | Confirmar contraseña | La misma contraseña |
+| 3 | Guardar contraseña | Guarda la contraseña y vuelve al inicio de sesión |
+
+Al guardarla el enlace deja de servir, se cierran todas tus sesiones y recibes un aviso por
+Telegram. Tu verificación en dos pasos **sigue activa**: al ingresar se pide igual, así que quien
+solo tenga acceso a tu correo no puede entrar a tu cuenta.
 
 ### 4.4 Mi turno
 
@@ -330,6 +371,7 @@ Tu confianza es lo primero: la plataforma solo pide los datos necesarios para fu
 | Contraseña | Iniciar sesión | MongoDB Atlas, **solo su huella** | No se puede leer ni recuperar |
 | Secreto de la app autenticadora | Segundo factor | MongoDB Atlas, **cifrado** | Nadie desde la aplicación |
 | Código por correo | Segundo factor | MongoDB Atlas, **solo su huella** (10 minutos) | Nadie: no se puede leer |
+| Código de «Perdí mi autenticador» | Configurar un autenticador nuevo | MongoDB Atlas, **solo su huella** (15 minutos) | Un solo uso; no sirve para entrar sin configurar el autenticador nuevo |
 | Códigos de recuperación y enlaces | Recuperar el acceso | Solo su huella SHA-256 | Un solo uso, con límite de intentos |
 | Sesión | Mantenerte conectado | `sessionStorage` del navegador | Se borra al cerrar la pestaña; dura 8 horas |
 

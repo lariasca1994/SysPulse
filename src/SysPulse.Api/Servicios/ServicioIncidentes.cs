@@ -586,7 +586,7 @@ public sealed class ServicioIncidentes(
         return new Aviso(
             motivo, clave ?? $"{inc.Id}:{motivo}", inc.Id.ToString(), severidad, esP1 && severidad != "informativo",
             niveles, gestores || esP1, esP1, usuarios ?? [], cuentasFijas, texto,
-            new ContenidoCorreo($"[SysPulse] {titulo}", titulo, tono, [("Incidente", inc.Titulo), .. filas, ("Prioridad", inc.Prioridad)], enlace, "Abrir el incidente"),
+            new ContenidoCorreo($"[Monitoreo e incidentes TI] {titulo}", titulo, tono, [("Incidente", inc.Titulo), .. filas, ("Prioridad", inc.Prioridad)], enlace, "Abrir el incidente"),
             enfriamiento);
     }
 

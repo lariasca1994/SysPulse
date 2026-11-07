@@ -58,6 +58,13 @@ public sealed class MfaDoc
     /// <summary>Envíos recientes: máximo 3 cada 10 minutos.</summary>
     public List<DateTime> EnviosCorreo { get; set; } = [];
 
+    // "Perdí mi autenticador": código al correo de la cuenta aunque el método correo no esté activo.
+    // Va aparte del código del método correo: solo habilita configurar un autenticador nuevo, nunca ingresar.
+    public string? RecuperacionHash { get; set; }
+    public DateTime? RecuperacionExpira { get; set; }
+    public int RecuperacionIntentos { get; set; }
+    public List<DateTime> EnviosRecuperacion { get; set; } = [];
+
     /// <summary>Códigos errados seguidos (app o correo): 5 bloquean el segundo factor 15 minutos.</summary>
     public int Fallos { get; set; }
     public DateTime? BloqueoHasta { get; set; }

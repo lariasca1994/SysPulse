@@ -33,7 +33,7 @@ public static class AuthEndpoints
                 // Aviso al admin: en #operaciones y, si no está conectado, por correo (sin datos de contacto del usuario).
                 await chat.SistemaAsync(SysPulse.Api.Servicios.ServicioChat.Operaciones, $"👋 Se registró una cuenta nueva de nivel {s.Nivel}.", ct);
                 cola.Encolar(SysPulse.Infrastructure.Notificaciones.Aviso.SoloCorreo("usuario-nuevo", $"usuario:{resultado.UsuarioId}",
-                    new SysPulse.Infrastructure.Notificaciones.ContenidoCorreo("[SysPulse] Usuario nuevo registrado", "Se registró un usuario nuevo", "info",
+                    new SysPulse.Infrastructure.Notificaciones.ContenidoCorreo("[Monitoreo e incidentes TI] Usuario nuevo registrado", "Se registró un usuario nuevo", "info",
                         [("Nombre", s.Nombre?.Trim() ?? ""), ("Nivel", s.Nivel ?? "")], $"{web.UrlWeb}/admin", "Ver los usuarios"), admins: true));
             }
             return resultado is null
@@ -138,6 +138,53 @@ public static class AuthEndpoints
             return Results.Ok(new { codigosRecuperacion = codigos, sesion = Sesion(actualizado, tokens) });
         });
 
+        // ───── "Perdí mi autenticador" (desde el paso del segundo factor) ─────
+        // 1) envía un código al correo de la cuenta aunque el método correo no esté activo;
+        // 2) el código correcto habilita solo configurar un autenticador nuevo (QR);
+        // 3) al confirmarlo se entregan códigos de recuperación nuevos y la sesión.
+        // Los códigos de recuperación existentes siguen sirviendo en el paso "mfa" mientras no se complete el paso 3.
+        g.MapPost("/mfa/recuperar/enviar", async (PasoSolicitud s, ServicioCuentas cuentas, Tokens tokens, HttpContext http, CancellationToken ct) =>
+        {
+            var usuario = await UsuarioDelPasoAsync(s.Token, "mfa", cuentas, tokens, ct)
+                ?? await UsuarioDelPasoAsync(s.Token, "recuperar-mfa", cuentas, tokens, ct);
+            if (usuario is null) return Results.Problem("La sesión de este paso venció. Inicia sesión de nuevo.", statusCode: 401);
+            return await cuentas.EnviarCodigoRecuperacionMfaAsync(usuario, Ip(http), ct)
+                ? Results.Ok(new
+                {
+                    mensaje = $"Enviamos un código a {Enmascarar(usuario.Email)}. Vence en 15 minutos.",
+                    token = tokens.Paso(usuario, "recuperar-mfa", ServicioCuentas.VigenciaRecuperacionMfa),
+                })
+                : Results.Problem("Ya enviamos varios códigos. Usa el último que llegó o espera unos minutos.", statusCode: 429);
+        });
+
+        g.MapPost("/mfa/recuperar/verificar", async (PasoSolicitud s, ServicioCuentas cuentas, Tokens tokens, HttpContext http, CancellationToken ct) =>
+        {
+            var usuario = await UsuarioDelPasoAsync(s.Token, "recuperar-mfa", cuentas, tokens, ct);
+            if (usuario is null) return Results.Problem("La sesión de este paso venció. Inicia sesión de nuevo.", statusCode: 401);
+            var resultado = await cuentas.ComprobarCodigoRecuperacionMfaAsync(usuario, s.Codigo, Ip(http), ct);
+            return resultado == ResultadoCodigo.Correcto
+                ? Results.Ok(new { paso = "reconfigurar-mfa", token = tokens.Paso(usuario, "reconfigurar-mfa") })
+                : Results.Problem(ServicioCuentas.Mensaje(resultado), statusCode: resultado == ResultadoCodigo.Bloqueado ? 423 : 400);
+        });
+
+        g.MapPost("/mfa/recuperar/iniciar", async (PasoSolicitud s, ServicioCuentas cuentas, Tokens tokens, CancellationToken ct) =>
+        {
+            var usuario = await UsuarioDelPasoAsync(s.Token, "reconfigurar-mfa", cuentas, tokens, ct);
+            if (usuario is null) return Results.Problem("La sesión de este paso venció. Inicia sesión de nuevo.", statusCode: 401);
+            var config = await cuentas.IniciarReconfiguracionMfaAsync(usuario, ct);
+            return Results.Ok(new { secreto = config.Secreto, uri = config.UriQr });
+        });
+
+        g.MapPost("/mfa/recuperar/confirmar", async (PasoSolicitud s, ServicioCuentas cuentas, Tokens tokens, HttpContext http, CancellationToken ct) =>
+        {
+            var usuario = await UsuarioDelPasoAsync(s.Token, "reconfigurar-mfa", cuentas, tokens, ct);
+            if (usuario is null) return Results.Problem("La sesión de este paso venció. Inicia sesión de nuevo.", statusCode: 401);
+            var (codigos, error) = await cuentas.ConfirmarCambioMfaAsync(usuario, s.Codigo, Ip(http), ct, "cuenta.mfa_recuperado");
+            if (error is not null) return Results.Problem(error, statusCode: 400);
+            var actualizado = (await cuentas.BuscarAsync(usuario.Id.ToString(), ct))!;
+            return Results.Ok(new { codigosRecuperacion = codigos, sesion = Sesion(actualizado, tokens) });
+        });
+
         app.MapGet("/api/auth/yo", async (ClaimsPrincipal user, ServicioCuentas cuentas, CancellationToken ct) =>
         {
             var u = await cuentas.BuscarAsync(user.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "", ct);
@@ -237,7 +284,7 @@ public static class AuthEndpoints
         });
 
         g.MapPost("/password/restablecer", async (RestablecerPasswordSolicitud s, ServicioCuentas cuentas, HttpContext http, CancellationToken ct) =>
-            await cuentas.RestablecerPasswordAsync(s.Token, s.Nueva, s.Codigo, Ip(http), ct) is { } error
+            await cuentas.RestablecerPasswordAsync(s.Token, s.Nueva, s.Confirmacion, Ip(http), ct) is { } error
                 ? Results.Problem(error, statusCode: 400)
                 : Results.Ok(new { mensaje = "Contraseña actualizada. Ya puedes iniciar sesión." }));
     }
@@ -286,5 +333,5 @@ public sealed record VerificarCorreoSolicitud(string? Token);
 public sealed record CambioPasswordConSesion(string? Actual, string? Nueva);
 public sealed record OlvidePasswordSolicitud(string? Email);
 public sealed record CambioMfaInicio(string? Password, string? Codigo);
-public sealed record RestablecerPasswordSolicitud(string? Token, string? Nueva, string? Codigo);
+public sealed record RestablecerPasswordSolicitud(string? Token, string? Nueva, string? Confirmacion = null);
 public sealed record NuevoEnlaceSolicitud(string? UsuarioId);

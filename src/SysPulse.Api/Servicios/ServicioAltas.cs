@@ -82,7 +82,7 @@ public sealed class ServicioAltas(ContextoMongo mongo, OpcionesAlta opciones, Au
         await auditoria.RegistrarAsync("alta.equipo_vinculado", null, ip, $"{tipo} · código ····-{alta.Pista}", ct: ct).ConfigureAwait(false);
         var plataforma = tipo == "android" ? "Celular Android" : "Equipo Windows";
         cola.Encolar(Aviso.SoloCorreo("equipo-alta", $"alta:{alta.Id}", new ContenidoCorreo(
-            $"[SysPulse] Equipo vinculado: {plataforma}", "Se vinculó un equipo nuevo", "ok",
+            $"[Monitoreo e incidentes TI] Equipo vinculado: {plataforma}", "Se vinculó un equipo nuevo", "ok",
             [("Tipo", plataforma), ("Código usado", $"····-{alta.Pista}"), ("Generado por", alta.CreadoPorNombre)],
             $"{opcionesCuentas.UrlWeb}/admin", "Ver los equipos"), admins: true));
         await chat.SistemaAsync(ServicioChat.Operaciones, $"🆕 Se vinculó un equipo nuevo ({plataforma}). Aparecerá en Salud de hosts con su primer reporte.", ct).ConfigureAwait(false);

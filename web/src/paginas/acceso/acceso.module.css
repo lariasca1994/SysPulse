@@ -496,3 +496,20 @@
 .alternarCodigo:hover {
   text-decoration: underline;
 }
+
+/* "Perdí mi autenticador": siempre visible en el paso del segundo factor */
+.perdiAutenticador {
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  color: var(--link);
+  font-size: var(--fs-13);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.perdiAutenticador:hover {
+  text-decoration: underline;
+}

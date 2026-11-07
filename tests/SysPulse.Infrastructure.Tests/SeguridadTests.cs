@@ -119,8 +119,8 @@ public class MfaTests
     {
         var uri = Mfa.UriConfiguracion("JBSWY3DPEHPK3PXP", "ana@example.com");
 
-        Assert.StartsWith("otpauth://totp/SysPulse:ana%40example.com?secret=JBSWY3DPEHPK3PXP", uri, StringComparison.Ordinal);
-        Assert.Contains("issuer=SysPulse", uri, StringComparison.Ordinal);
+        Assert.StartsWith("otpauth://totp/Monitoreo%20e%20incidentes%20TI:ana%40example.com?secret=JBSWY3DPEHPK3PXP", uri, StringComparison.Ordinal);
+        Assert.Contains("issuer=Monitoreo%20e%20incidentes%20TI", uri, StringComparison.Ordinal);
     }
 
     [Fact]

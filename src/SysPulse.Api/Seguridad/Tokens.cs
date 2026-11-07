@@ -31,7 +31,7 @@ public sealed class Tokens(string secreto)
         new(ClaimSello, u.SelloSeguridad),
     ]);
 
-    public string Paso(UsuarioDoc u, string paso) => Emitir(AudienciaPaso, DuracionPaso,
+    public string Paso(UsuarioDoc u, string paso, TimeSpan? duracion = null) => Emitir(AudienciaPaso, duracion ?? DuracionPaso,
     [
         new(JwtRegisteredClaimNames.Sub, u.Id.ToString()),
         new(ClaimPaso, paso),

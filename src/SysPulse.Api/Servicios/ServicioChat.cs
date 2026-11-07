@@ -167,7 +167,7 @@ public sealed class ServicioChat(ContextoMongo mongo, IHubContext<ChatHub> hub, 
         var extracto = texto.Length > 300 ? texto[..300] + "…" : texto;
         foreach (var u in destinatarios.Where(u => !conectados.Contains(u.Id.ToString())))
         {
-            var contenido = new ContenidoCorreo($"[SysPulse] Mensaje nuevo en {nombreSala}", $"Mensaje nuevo en {nombreSala}", "info",
+            var contenido = new ContenidoCorreo($"[Monitoreo e incidentes TI] Mensaje nuevo en {nombreSala}", $"Mensaje nuevo en {nombreSala}", "info",
                 [("De", autor.Nombre), ("Mensaje", extracto)], $"{opcionesCuentas.UrlWeb}/salas/{sala.Id}", "Abrir la sala");
             cola.Encolar(Aviso.SoloCorreo("chat", $"chat:{sala.Id}:{u.Id}", contenido, [u.Id], enfriamiento: EnfriamientoCorreoChat));
         }

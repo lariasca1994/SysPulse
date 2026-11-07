@@ -20,6 +20,7 @@ const DetalleIncidente = lazy(() => import("./paginas/incidentes/DetalleIncident
 const MiTurno = lazy(() => import("./paginas/incidentes/MiTurno"));
 const OlvidePassword = lazy(() => import("./paginas/acceso/OlvidePassword"));
 const Restablecer = lazy(() => import("./paginas/acceso/Restablecer"));
+const RecuperarMfa = lazy(() => import("./paginas/acceso/RecuperarMfa"));
 const Perfil = lazy(() => import("./paginas/Perfil"));
 const Salas = lazy(() => import("./paginas/salas/Salas"));
 const Admin = lazy(() => import("./paginas/admin/Admin"));
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="/cambiar-password" element={<CambiarPassword />} />
             <Route path="/mfa/configurar" element={<ConfigurarMfa />} />
             <Route path="/mfa" element={<VerificarMfa />} />
+            <Route path="/mfa/recuperar" element={<RecuperarMfa />} />
             <Route path="/olvide" element={<SoloInvitado><OlvidePassword /></SoloInvitado>} />
             <Route path="/restablecer" element={<Restablecer />} />
             <Route element={<Protegida><LayoutApp /></Protegida>}>

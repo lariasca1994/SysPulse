@@ -6,7 +6,7 @@ namespace SysPulse.Infrastructure.Seguridad;
 /// <summary>MFA con TOTP (RFC 6238, 30 s, 6 dígitos): Google/Microsoft Authenticator, Authy, etc.</summary>
 public static class Mfa
 {
-    public const string Emisor = "SysPulse";
+    public const string Emisor = "Monitoreo e incidentes TI";
     public const int CantidadCodigosRecuperacion = 10;
 
     public static string NuevoSecreto() => Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(20));

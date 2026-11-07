@@ -30,7 +30,7 @@ export default function OlvidePassword() {
 
   return (
     <LayoutAcceso paso="Recuperar acceso" titulo="¿Olvidaste tu contraseña?"
-      subtitulo="Te enviaremos un enlace a tu correo. Para tu seguridad, también te pediremos el código de tu app autenticadora.">
+      subtitulo="Escribe el correo de tu cuenta y te enviaremos un enlace de un solo uso para crear una contraseña nueva.">
       {resultado ? (
         <div className={s.formulario}>
           <Alerta tipo="exito">{resultado.mensaje} El enlace vence en 1 hora.</Alerta>

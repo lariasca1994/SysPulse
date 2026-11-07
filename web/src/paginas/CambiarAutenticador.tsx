@@ -91,7 +91,7 @@ export function CambiarAutenticador() {
   function descargar() {
     const contenido = `Códigos de recuperación de Monitoreo e incidentes TI\nCada código sirve una sola vez si pierdes acceso a tu app autenticadora.\n\n${codigos.join("\n")}\n`;
     const url = URL.createObjectURL(new Blob([contenido], { type: "text/plain;charset=utf-8" }));
-    const enlace = Object.assign(document.createElement("a"), { href: url, download: "syspulse-codigos-recuperacion.txt" });
+    const enlace = Object.assign(document.createElement("a"), { href: url, download: "codigos-recuperacion-monitoreo-ti.txt" });
     enlace.click();
     URL.revokeObjectURL(url);
   }
