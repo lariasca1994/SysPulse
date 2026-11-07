@@ -33,6 +33,12 @@
   padding: var(--sp-2) var(--sp-3) var(--sp-6);
 }
 
+/* El nombre descriptivo es largo: en la barra lateral va en una sola línea, alineado con el pulso. */
+.marca .marcaTexto {
+  font-size: var(--fs-14);
+  white-space: nowrap;
+}
+
 .marcaMovil {
   display: none;
 }
