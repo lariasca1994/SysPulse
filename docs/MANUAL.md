@@ -33,9 +33,9 @@ un incidente con prioridad y SLA, avisa por Telegram y correo al nivel de soport
 - Necesitas un navegador, **una app autenticadora** (Google o Microsoft Authenticator, Authy) o
   acceso a tu **correo** para la verificación en dos pasos, y una cuenta de **Telegram**.
 - La API se duerme sin uso: la primera visita puede tardar hasta un minuto (la web lo avisa).
-- Las capturas internas se tomaron con una cuenta de prueba de nivel **N2**; el correo y el
-  Telegram aparecen ocultos. La pantalla de **Administración** solo la ve el rol admin y se
-  describe en texto.
+- Las capturas internas se tomaron con la cuenta de prueba; el correo, el Telegram y los nombres
+  de las demás personas aparecen ocultos o con datos de ejemplo. El menú y los botones de
+  **Administración** solo los ve el rol admin: se ocultaron en las capturas y se describen en texto.
 
 ### Límites
 
