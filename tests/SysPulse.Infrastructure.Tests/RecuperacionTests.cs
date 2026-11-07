@@ -77,6 +77,38 @@ public class RecuperacionTests
     }
 }
 
+/// <summary>Códigos de recuperación nuevos al cambiar o restablecer la contraseña.</summary>
+public class CodigosRecuperacionNuevosTests
+{
+    private static readonly Cifrado Cifrador = new("clave-maestra-de-prueba-con-mas-de-32-caracteres");
+
+    [Fact]
+    public void CodigosPendientes_SeGuardanCifrados_YSeRecuperanIguales()
+    {
+        var codigos = Mfa.CodigosRecuperacion();
+        var cifrados = Cifrador.Cifrar(ServicioCuentas.UnirCodigos(codigos));
+
+        Assert.DoesNotContain(codigos[0], cifrados, StringComparison.Ordinal);
+        Assert.Equal(codigos, ServicioCuentas.SepararCodigos(Cifrador.Descifrar(cifrados)));
+    }
+
+    [Fact]
+    public void ListaNueva_AnulaLaAnterior_PorqueSusHuellasNoCoinciden()
+    {
+        var anteriores = ServicioCuentas.HuellasRecuperacion(Mfa.CodigosRecuperacion());
+        var nuevos = Mfa.CodigosRecuperacion();
+        var huellasNuevas = ServicioCuentas.HuellasRecuperacion(nuevos);
+
+        Assert.Equal(Mfa.CantidadCodigosRecuperacion, huellasNuevas.Count);
+        Assert.Empty(anteriores.Intersect(huellasNuevas));
+        // La huella no depende de mayúsculas ni de espacios: el código se acepta como lo escriba la persona.
+        Assert.Equal(huellasNuevas[0], ServicioCuentas.HuellasRecuperacion([$" {nuevos[0].ToLowerInvariant()} "])[0]);
+    }
+
+    [Fact]
+    public void SepararCodigos_SinTexto_DevuelveVacio() => Assert.Empty(ServicioCuentas.SepararCodigos(null));
+}
+
 /// <summary>El nombre descriptivo "Monitoreo e incidentes TI" en correos y en el emisor del QR.</summary>
 public class NombrePortalTests
 {
@@ -100,12 +132,13 @@ public class NombrePortalTests
     }
 
     [Theory]
-    [InlineData(null, "Monitoreo e incidentes TI")]
-    [InlineData("", "Monitoreo e incidentes TI")]
-    [InlineData("SysPulse", "Monitoreo e incidentes TI")]
-    [InlineData("Mesa de ayuda", "Mesa de ayuda")]
-    public void Remitente_UsaElNombreDescriptivo(string? configurado, string esperado) =>
-        Assert.Equal(esperado, PlantillasCorreo.NombreRemitente(configurado));
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("SysPulse")]
+    [InlineData("SYSPULSE ")]
+    [InlineData("Otro nombre cualquiera")]
+    public void Remitente_SiempreEsElNombreDescriptivo(string? configurado) =>
+        Assert.Equal("Monitoreo e incidentes TI", PlantillasCorreo.NombreRemitente(configurado));
 
     [Fact]
     public void EmisorDelQr_EsElNombreDescriptivo()

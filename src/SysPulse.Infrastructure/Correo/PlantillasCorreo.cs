@@ -12,13 +12,14 @@ public static class PlantillasCorreo
     public const string NombrePortal = "Monitoreo e incidentes TI";
 
     /// <summary>
-    /// Nombre del remitente: el configurado, salvo que esté vacío o sea el nombre interno anterior, en cuyo caso
-    /// se usa el nombre descriptivo del portal.
+    /// Nombre del remitente de todos los correos: siempre el nombre descriptivo del portal. BREVO_SENDER_NAME de la
+    /// nube se ignora (puede seguir con el nombre interno anterior); el correo remitente sí sale de la configuración.
     /// </summary>
-    public static string NombreRemitente(string? configurado) =>
-        string.IsNullOrWhiteSpace(configurado) || string.Equals(configurado.Trim(), "SysPulse", StringComparison.OrdinalIgnoreCase)
-            ? NombrePortal
-            : configurado.Trim();
+    public static string NombreRemitente(string? configurado)
+    {
+        _ = configurado;
+        return NombrePortal;
+    }
 
     /// <summary>"Perdí mi autenticador": código para configurar un autenticador nuevo (vence en 15 minutos).</summary>
     public static (string Asunto, string Html, string Texto) CodigoRecuperacionMfa(string nombre, string codigo)

@@ -44,6 +44,11 @@ public sealed class MfaDoc
     public DateTime? PendienteExpira { get; set; }
     public bool Activo { get; set; }
     public List<string> CodigosRecuperacionHash { get; set; } = [];
+    /// <summary>
+    /// Códigos de recuperación generados al restablecer la contraseña, cifrados, hasta mostrarlos una sola vez en el
+    /// siguiente ingreso completo (luego se borran). Nunca viajan por correo ni Telegram.
+    /// </summary>
+    public string? CodigosPendientesCifrado { get; set; }
     /// <summary>Último paso TOTP aceptado: impide reutilizar el mismo código.</summary>
     public long UltimoPaso { get; set; }
 

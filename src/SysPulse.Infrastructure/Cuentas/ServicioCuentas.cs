@@ -545,6 +545,7 @@ public sealed class ServicioCuentas(
             update = update
                 .Set(u => u.Mfa.Preferido, MetodoCorreo)
                 .Set(u => u.Mfa.CodigosRecuperacionHash, recuperacion.Select(c => Cifrado.Hash(Mfa.NormalizarCodigoRecuperacion(c))).ToList())
+                .Set(u => u.Mfa.CodigosPendientesCifrado, null)
                 .Set(u => u.SelloSeguridad, Guid.NewGuid().ToString("N"));
         await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, update, cancellationToken: ct).ConfigureAwait(false);
         await auditoria.RegistrarAsync("cuenta.mfa_correo_activado", usuario.Id, ip, ct: ct).ConfigureAwait(false);
@@ -591,6 +592,7 @@ public sealed class ServicioCuentas(
             update = update
                 .Set(u => u.Mfa.Preferido, MetodoApp)
                 .Set(u => u.Mfa.CodigosRecuperacionHash, recuperacion.Select(c => Cifrado.Hash(Mfa.NormalizarCodigoRecuperacion(c))).ToList())
+                .Set(u => u.Mfa.CodigosPendientesCifrado, null)
                 .Set(u => u.SelloSeguridad, Guid.NewGuid().ToString("N"));
         await db.Usuarios.UpdateOneAsync(u => u.Id == usuario.Id, update, cancellationToken: ct).ConfigureAwait(false);
         await auditoria.RegistrarAsync("cuenta.mfa_activado", usuario.Id, ip, ct: ct).ConfigureAwait(false);
@@ -638,6 +640,7 @@ public sealed class ServicioCuentas(
             .Set(u => u.Mfa.Activo, true)
             .Set(u => u.Mfa.UltimoPaso, paso.Value)
             .Set(u => u.Mfa.CodigosRecuperacionHash, recuperacion.Select(c => Cifrado.Hash(Mfa.NormalizarCodigoRecuperacion(c))).ToList())
+                .Set(u => u.Mfa.CodigosPendientesCifrado, null)
             .Set(u => u.SelloSeguridad, Guid.NewGuid().ToString("N")), cancellationToken: ct).ConfigureAwait(false);
         await auditoria.RegistrarAsync(evento, usuario.Id, ip, ct: ct).ConfigureAwait(false);
         if (usuario.Telegram is { Verificado: true, ChatId: { } chat })
@@ -700,22 +703,27 @@ public sealed class ServicioCuentas(
     private static readonly TimeSpan VigenciaRestablecer = TimeSpan.FromHours(1);
     private const int MaxSolicitudesRestablecer = 3;
 
-    /// <summary>Cambio con sesión iniciada: exige la contraseña actual. Cierra las demás sesiones (nuevo sello).</summary>
-    public async Task<string?> CambiarPasswordAsync(UsuarioDoc usuario, string? actual, string? nueva, string? ip, CancellationToken ct)
+    /// <summary>
+    /// Cambio con sesión iniciada: exige la contraseña actual. Cierra las demás sesiones (nuevo sello) y genera
+    /// códigos de recuperación nuevos, que anulan todos los anteriores en ese momento y se muestran al guardar.
+    /// </summary>
+    public async Task<(string? Error, IReadOnlyList<string>? Codigos)> CambiarPasswordAsync(UsuarioDoc usuario, string? actual, string? nueva, string? ip, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(usuario);
         if (string.IsNullOrEmpty(actual) || _hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, actual) == PasswordVerificationResult.Failed)
         {
             await auditoria.RegistrarAsync("cuenta.password_cambio_fallido", usuario.Id, ip, ct: ct).ConfigureAwait(false);
-            return "La contraseña actual no es correcta.";
+            return ("La contraseña actual no es correcta.", null);
         }
-        if (ReglasRegistro.ValidarPassword(nueva, usuario.Email) is { } error) return error;
-        if (string.Equals(actual, nueva, StringComparison.Ordinal)) return "La nueva contraseña debe ser distinta de la actual.";
+        if (ReglasRegistro.ValidarPassword(nueva, usuario.Email) is { } error) return (error, null);
+        if (string.Equals(actual, nueva, StringComparison.Ordinal)) return ("La nueva contraseña debe ser distinta de la actual.", null);
 
-        await GuardarPasswordAsync(usuario, nueva!, ct).ConfigureAwait(false);
+        var codigos = Estado(usuario).Configurado ? Mfa.CodigosRecuperacion() : null;
+        await GuardarPasswordAsync(usuario, nueva!, codigos, pendientes: false, ct).ConfigureAwait(false);
         await auditoria.RegistrarAsync("cuenta.password_cambiada", usuario.Id, ip, ct: ct).ConfigureAwait(false);
-        await AvisarCambioAsync(usuario, ct).ConfigureAwait(false);
-        return null;
+        if (codigos is not null) await auditoria.RegistrarAsync("cuenta.codigos_recuperacion_regenerados", usuario.Id, ip, "cambio de contraseña", ct: ct).ConfigureAwait(false);
+        await AvisarCambioAsync(usuario, codigos is not null, ct).ConfigureAwait(false);
+        return (null, codigos);
     }
 
     /// <summary>
@@ -779,30 +787,61 @@ public sealed class ServicioCuentas(
         // Consumo atómico: dos envíos simultáneos con el mismo enlace no pasan ambos.
         if (await db.Verificaciones.FindOneAndDeleteAsync(x => x.Id == v.Id, cancellationToken: ct).ConfigureAwait(false) is null) return Invalido;
         await db.Verificaciones.DeleteManyAsync(x => x.UsuarioId == usuario.Id && x.Tipo == TipoVerificacion.Restablecer, ct).ConfigureAwait(false);
-        await GuardarPasswordAsync(usuario, nueva!, ct, desbloquear: true).ConfigureAwait(false);
+        // Códigos de recuperación nuevos: los anteriores dejan de servir ya. Quien solo tiene el enlace del correo no
+        // los ve: quedan cifrados y se muestran una sola vez después del siguiente ingreso con el segundo factor.
+        var codigos = Estado(usuario).Configurado ? Mfa.CodigosRecuperacion() : null;
+        await GuardarPasswordAsync(usuario, nueva!, codigos, pendientes: true, ct, desbloquear: true).ConfigureAwait(false);
         await auditoria.RegistrarAsync("cuenta.password_restablecida", usuario.Id, ip, ct: ct).ConfigureAwait(false);
-        await AvisarCambioAsync(usuario, ct).ConfigureAwait(false);
+        if (codigos is not null) await auditoria.RegistrarAsync("cuenta.codigos_recuperacion_regenerados", usuario.Id, ip, "restablecimiento", ct: ct).ConfigureAwait(false);
+        await AvisarCambioAsync(usuario, codigos is not null, ct).ConfigureAwait(false);
         return null;
     }
 
-    private async Task GuardarPasswordAsync(UsuarioDoc usuario, string nueva, CancellationToken ct, bool desbloquear = false)
+    /// <summary>Huellas de una lista de códigos de recuperación (lo único que se guarda de ellos).</summary>
+    public static List<string> HuellasRecuperacion(IEnumerable<string> codigos) =>
+        codigos.Select(c => Cifrado.Hash(Mfa.NormalizarCodigoRecuperacion(c))).ToList();
+
+    /// <summary>Texto con el que se guardan cifrados los códigos pendientes de mostrar (uno por línea).</summary>
+    public static string UnirCodigos(IEnumerable<string> codigos) => string.Join('\n', codigos);
+
+    public static IReadOnlyList<string> SepararCodigos(string? texto) =>
+        (texto ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private async Task GuardarPasswordAsync(UsuarioDoc usuario, string nueva, IReadOnlyList<string>? codigos, bool pendientes, CancellationToken ct, bool desbloquear = false)
     {
         var u = Builders<UsuarioDoc>.Update
             .Set(x => x.PasswordHash, _hasher.HashPassword(usuario, nueva))
             .Set(x => x.DebeCambiarPassword, false)
             .Set(x => x.SelloSeguridad, Guid.NewGuid().ToString("N"));
         if (desbloquear) u = u.Set(x => x.IntentosFallidos, 0).Set(x => x.BloqueadoHasta, null);
+        if (codigos is not null)
+            u = u.Set(x => x.Mfa.CodigosRecuperacionHash, HuellasRecuperacion(codigos))
+                 .Set(x => x.Mfa.CodigosPendientesCifrado, pendientes ? cifrado.Cifrar(UnirCodigos(codigos)) : null);
         await db.Usuarios.UpdateOneAsync(x => x.Id == usuario.Id, u, cancellationToken: ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Códigos de recuperación generados en un restablecimiento y aún no mostrados: se entregan una sola vez,
+    /// después de un ingreso completo (contraseña y segundo factor), y se borran en ese mismo momento.
+    /// </summary>
+    public async Task<IReadOnlyList<string>?> TomarCodigosPendientesAsync(UsuarioDoc usuario, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(usuario);
+        var antes = await db.Usuarios.FindOneAndUpdateAsync(
+            Builders<UsuarioDoc>.Filter.Where(u => u.Id == usuario.Id && u.Mfa.CodigosPendientesCifrado != null),
+            Builders<UsuarioDoc>.Update.Set(u => u.Mfa.CodigosPendientesCifrado, null),
+            new FindOneAndUpdateOptions<UsuarioDoc> { ReturnDocument = ReturnDocument.Before }, ct).ConfigureAwait(false);
+        return antes?.Mfa.CodigosPendientesCifrado is { } cifrados ? SepararCodigos(cifrado.Descifrar(cifrados)) : null;
+    }
+
     /// <summary>Aviso por Telegram: si la persona no hizo el cambio, se entera de inmediato.</summary>
-    private async Task AvisarCambioAsync(UsuarioDoc usuario, CancellationToken ct)
+    private async Task AvisarCambioAsync(UsuarioDoc usuario, bool codigosNuevos, CancellationToken ct)
     {
         if (usuario.Telegram is not { Verificado: true, ChatId: { } chat }) return;
         try
         {
             await telegram.EnviarAsync(chat,
-                $"🔐 Monitoreo e incidentes TI: la contraseña de tu cuenta se cambió ({DateTime.UtcNow:dd/MM HH:mm} UTC). Se cerraron las demás sesiones.\nSi no fuiste tú, avisa al administrador de inmediato.",
+                $"🔐 Monitoreo e incidentes TI: la contraseña de tu cuenta se cambió ({DateTime.UtcNow:dd/MM HH:mm} UTC). Se cerraron las demás sesiones{(codigosNuevos ? " y tus códigos de recuperación anteriores ya no sirven (los nuevos solo se ven en la plataforma)" : "")}.\nSi no fuiste tú, avisa al administrador de inmediato.",
                 ct: ct).ConfigureAwait(false);
         }
         catch (HttpRequestException)

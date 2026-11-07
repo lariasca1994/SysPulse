@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { ShieldCheck, Smartphone } from "lucide-react";
-import { auth, type MetodosMfa } from "../../api/auth";
+import { auth, type MetodosMfa, type Sesion } from "../../api/auth";
 import { esFalla } from "../../api/cliente";
 import { useSesion } from "../../sesionContexto";
 import { Alerta, Boton } from "../../componentes/ui/Basicos";
 import { Campo, CampoCodigo } from "../../componentes/ui/Campos";
 import { LayoutAcceso } from "./LayoutAcceso";
+import { CodigosRecuperacion } from "./CodigosRecuperacion";
+import { hayCodigosNuevos } from "./recuperacion";
 import s from "./acceso.module.css";
 
 type Modo = "app" | "correo" | "recuperacion";
@@ -30,6 +32,8 @@ export default function VerificarMfa() {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const enviado = useRef(false);
+  // Tras "Olvidé mi contraseña" la API entrega aquí, una sola vez, los códigos de recuperación nuevos.
+  const [nuevos, setNuevos] = useState<{ sesion: Sesion; codigos: string[] } | null>(null);
 
   async function enviarCorreo() {
     setError(null);
@@ -56,6 +60,10 @@ export default function VerificarMfa() {
     setCargando(true);
     try {
       const r = await auth.verificarMfa(token!, codigo, modo === "recuperacion" ? undefined : modo);
+      if (hayCodigosNuevos(r.codigosRecuperacion)) {
+        setNuevos({ sesion: r.sesion, codigos: r.codigosRecuperacion });
+        return;
+      }
       iniciar(r.sesion);
       navegar("/", { replace: true });
     } catch (err) {
@@ -74,6 +82,16 @@ export default function VerificarMfa() {
   }
 
   const listo = modo === "recuperacion" ? codigo.trim().length >= 9 : codigo.length === 6;
+
+  if (nuevos) {
+    return (
+      <LayoutAcceso paso="Contraseña restablecida" titulo="Tus códigos de recuperación nuevos"
+        subtitulo="Al restablecer tu contraseña se generaron códigos nuevos. Cada uno te permite entrar una vez si pierdes tu segundo factor.">
+        <CodigosRecuperacion codigos={nuevos.codigos} textoContinuar="Entrar a la plataforma"
+          alContinuar={() => { iniciar(nuevos.sesion); navegar("/", { replace: true }); }} />
+      </LayoutAcceso>
+    );
+  }
 
   return (
     <LayoutAcceso paso="Segundo factor" titulo="Ingresa tu código" subtitulo={SUBTITULOS[modo]}>

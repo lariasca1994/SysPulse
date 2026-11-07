@@ -8,6 +8,8 @@ import { CampoPassword } from "../componentes/ui/Campos";
 import h from "./hosts/hosts.module.css";
 import { MetodosVerificacion } from "./MetodosVerificacion";
 import { SolicitarGestor } from "./SolicitarGestor";
+import { CodigosRecuperacion } from "./acceso/CodigosRecuperacion";
+import { hayCodigosNuevos } from "./acceso/recuperacion";
 import s from "./Perfil.module.css";
 
 const ROL: Record<string, string> = {
@@ -22,6 +24,7 @@ export default function Perfil() {
   const [errores, setErrores] = useState<{ actual?: string; nueva?: string; confirmacion?: string }>({});
   const [general, setGeneral] = useState<string | null>(null);
   const [exito, setExito] = useState(false);
+  const [codigosNuevos, setCodigosNuevos] = useState<string[] | null>(null);
   const [cargando, setCargando] = useState(false);
 
   if (!usuario || !sesion) return null;
@@ -40,6 +43,7 @@ export default function Perfil() {
       const r = await auth.cambiarPasswordConSesion(sesion!.token, actual, nueva);
       // La API cerró las demás sesiones: esta continúa con el token nuevo.
       iniciar(r.sesion);
+      if (hayCodigosNuevos(r.codigosRecuperacion)) setCodigosNuevos(r.codigosRecuperacion);
       setActual("");
       setNueva("");
       setConfirmacion("");
@@ -87,7 +91,13 @@ export default function Perfil() {
 
         <section className={s.panel} aria-labelledby="password">
           <h2 id="password" className={s.tituloPanel}><KeyRound size={18} aria-hidden="true" /> Cambiar contraseña</h2>
-          <p className={s.nota}>Al cambiarla se cierran tus sesiones en otros dispositivos y recibes un aviso por Telegram.</p>
+          <p className={s.nota}>Al cambiarla se cierran tus sesiones en otros dispositivos, recibes un aviso por Telegram y se generan códigos de recuperación nuevos (los anteriores dejan de servir).</p>
+          {codigosNuevos ? (
+            <>
+              <Alerta tipo="exito">Contraseña actualizada. Las demás sesiones quedaron cerradas.</Alerta>
+              <CodigosRecuperacion codigos={codigosNuevos} textoContinuar="Listo" alContinuar={() => setCodigosNuevos(null)} />
+            </>
+          ) : (
           <form className={s.formulario} onSubmit={enviar} noValidate>
             {exito && <Alerta tipo="exito">Contraseña actualizada. Las demás sesiones quedaron cerradas.</Alerta>}
             {general && <Alerta tipo="error">{general}</Alerta>}
@@ -102,6 +112,7 @@ export default function Perfil() {
               <Boton type="submit" cargando={cargando} disabled={!actual || !nueva || !confirmacion}>Guardar contraseña</Boton>
             </div>
           </form>
+          )}
         </section>
         <MetodosVerificacion />
         {["N1", "N2", "N3"].includes(usuario.rol) && <SolicitarGestor />}

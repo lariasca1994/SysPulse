@@ -73,9 +73,15 @@ operaciones. Todo corre en capas gratuitas.
   MFA obligatorio (app autenticadora TOTP o código por correo, a elección, con códigos de
   recuperación), cambio y restablecimiento de contraseña, y **Perdí mi autenticador** (código al
   correo para configurar un autenticador nuevo).
-- **Nombre descriptivo:** la web, los correos (asunto, encabezado, pie y remitente), los avisos de
-  Telegram y el emisor del QR de la app autenticadora muestran **Monitoreo e incidentes TI**; los
-  servicios, URLs, variables y agentes instalados conservan su nombre técnico.
+- **Códigos de recuperación renovados:** al cambiar la contraseña desde el perfil, al restablecerla
+  con "Olvidé mi contraseña" y al configurar el autenticador nuevo en "Perdí mi autenticador" se
+  generan 10 códigos nuevos y se anulan todos los anteriores en ese momento. Se muestran una sola
+  vez: al guardar (perfil y autenticador nuevo) o en el siguiente ingreso con el segundo factor
+  (restablecimiento); nunca por correo ni Telegram.
+- **Nombre descriptivo:** la web, los correos (asunto, encabezado, pie y remitente, aunque la
+  configuración del remitente en la nube conserve el nombre anterior), los avisos de Telegram y el
+  emisor del QR de la app autenticadora muestran **Monitoreo e incidentes TI**; los servicios,
+  URLs, variables y agentes instalados conservan su nombre técnico.
 - **Equipos sin fricción:** alta con un código de un solo uso, nombre genérico más el modelo comercial
   para saber dónde está cada agente (nunca el nombre que le dio el dueño) y actualización automática de
   los agentes con verificación de huella.
@@ -260,8 +266,9 @@ asigna el sistema, acompañado de su modelo comercial para ubicarlo.
    si tienes los dos, la pantalla ofrece usar el otro.
 4. Si olvidaste la contraseña, usa **¿Olvidaste tu contraseña?**: escribe tu correo (la respuesta es
    la misma exista o no la cuenta) y abre el enlace de un solo uso que llega; solo se pide la
-   contraseña nueva y su confirmación. Al guardarla se cierran todas las sesiones y la verificación
-   en dos pasos sigue activa.
+   contraseña nueva y su confirmación. Al guardarla se cierran todas las sesiones, la verificación
+   en dos pasos sigue activa y los códigos de recuperación anteriores se anulan: los nuevos se
+   muestran en el siguiente ingreso, después del segundo factor.
 5. Si perdiste tu autenticador, en el paso del código pulsa **Perdí mi autenticador**: llega un código
    de 6 dígitos al correo de la cuenta (aunque no hayas activado el código por correo); con él
    configuras el autenticador nuevo con su QR y recibes códigos de recuperación nuevos. Tus códigos de

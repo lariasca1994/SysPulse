@@ -191,6 +191,11 @@ Al guardarla el enlace deja de servir, se cierran todas tus sesiones y recibes u
 Telegram. Tu verificación en dos pasos **sigue activa**: al ingresar se pide igual, así que quien
 solo tenga acceso a tu correo no puede entrar a tu cuenta.
 
+En ese momento se generan **10 códigos de recuperación nuevos** y **todos los anteriores dejan de
+servir**. Los nuevos se muestran una sola vez **en tu siguiente ingreso**, después del código de
+tu segundo factor (pantalla **Tus códigos de recuperación nuevos**): guárdalos, marca la casilla y
+pulsa **Entrar a la plataforma**. Nunca se envían por correo ni por Telegram.
+
 ### 4.4 Mi turno
 
 ![Mi turno: asignados y disponibles para tomar](img/manual/04-mi-turno.png)
@@ -283,7 +288,9 @@ Muestra tu correo, tu Telegram (verificado), el estado de la verificación en do
 Desde aquí:
 
 - **Cambiar contraseña:** contraseña actual, nueva (mínimo 12 caracteres) y confirmación. Al
-  guardarla se cierran tus sesiones en otros dispositivos y recibes un aviso por Telegram.
+  guardarla se cierran tus sesiones en otros dispositivos, recibes un aviso por Telegram y se
+  muestran **10 códigos de recuperación nuevos**: todos los anteriores dejan de servir en ese
+  momento. Cópialos o descárgalos, marca la casilla y pulsa **Listo**.
 - **Verificación en dos pasos:** muestra tus métodos activos; **Agregar app autenticadora** o
   **Agregar código por correo** suma el que falta (se confirma con su primer código), y **Pedir la
   app / el correo por defecto** elige cuál se pide al ingresar.

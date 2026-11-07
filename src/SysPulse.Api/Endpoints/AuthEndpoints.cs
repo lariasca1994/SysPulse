@@ -110,9 +110,11 @@ public static class AuthEndpoints
             if (usuario is null) return Results.Problem("La sesión de este paso venció. Inicia sesión de nuevo.", statusCode: 401);
             var metodo = s.Metodo ?? ServicioCuentas.Estado(usuario).Preferido;
             var resultado = await cuentas.ComprobarCodigoAsync(usuario, metodo, s.Codigo, Ip(http), ct);
-            return resultado == ResultadoCodigo.Correcto
-                ? Results.Ok(new { sesion = Sesion(usuario, tokens) })
-                : Results.Problem(ServicioCuentas.Mensaje(resultado), statusCode: resultado == ResultadoCodigo.Bloqueado ? 423 : 400);
+            if (resultado != ResultadoCodigo.Correcto)
+                return Results.Problem(ServicioCuentas.Mensaje(resultado), statusCode: resultado == ResultadoCodigo.Bloqueado ? 423 : 400);
+            // Tras "Olvidé mi contraseña" se generaron códigos de recuperación nuevos: se muestran aquí, una sola vez.
+            var codigos = await cuentas.TomarCodigosPendientesAsync(usuario, ct);
+            return Results.Ok(new { sesion = Sesion(usuario, tokens), codigosRecuperacion = codigos });
         });
 
         // ───── Código por correo (al configurar el segundo factor o al ingresar) ─────
@@ -197,10 +199,12 @@ public static class AuthEndpoints
         {
             var usuario = await cuentas.BuscarAsync(user.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "", ct);
             if (usuario is null) return Results.Unauthorized();
-            if (await cuentas.CambiarPasswordAsync(usuario, s.Actual, s.Nueva, Ip(http), ct) is { } error)
+            var (error, codigos) = await cuentas.CambiarPasswordAsync(usuario, s.Actual, s.Nueva, Ip(http), ct);
+            if (error is not null)
                 return Results.ValidationProblem(new Dictionary<string, string[]> { [error.StartsWith("La contraseña actual", StringComparison.Ordinal) ? "actual" : "nueva"] = [error] }, title: error);
             var actualizado = await cuentas.BuscarAsync(usuario.Id.ToString(), ct);
-            return Results.Ok(new { sesion = Sesion(actualizado!, tokens) });
+            // Códigos de recuperación nuevos (los anteriores ya no sirven): se muestran una sola vez, al guardar.
+            return Results.Ok(new { sesion = Sesion(actualizado!, tokens), codigosRecuperacion = codigos });
         }).RequireAuthorization();
 
         // ───── Cambiar de app autenticadora (Mi cuenta) ─────
@@ -286,7 +290,7 @@ public static class AuthEndpoints
         g.MapPost("/password/restablecer", async (RestablecerPasswordSolicitud s, ServicioCuentas cuentas, HttpContext http, CancellationToken ct) =>
             await cuentas.RestablecerPasswordAsync(s.Token, s.Nueva, s.Confirmacion, Ip(http), ct) is { } error
                 ? Results.Problem(error, statusCode: 400)
-                : Results.Ok(new { mensaje = "Contraseña actualizada. Ya puedes iniciar sesión." }));
+                : Results.Ok(new { mensaje = "Contraseña actualizada. Tus códigos de recuperación anteriores ya no sirven: al iniciar sesión te mostraremos los nuevos." }));
     }
 
     private static object Sesion(UsuarioDoc u, Tokens tokens) => new

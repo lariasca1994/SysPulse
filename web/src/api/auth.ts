@@ -48,7 +48,7 @@ export const auth = {
   activarMfa: (token: string, codigo: string) =>
     post<{ codigosRecuperacion: string[]; sesion: Sesion }>("/api/auth/mfa/activar", { token, codigo }),
   verificarMfa: (token: string, codigo: string, metodo?: "app" | "correo") =>
-    post<{ sesion: Sesion }>("/api/auth/mfa/verificar", { token, codigo, metodo }),
+    post<{ sesion: Sesion; codigosRecuperacion?: string[] | null }>("/api/auth/mfa/verificar", { token, codigo, metodo }),
   enviarCodigoCorreo: (token: string) => post<{ mensaje: string }>("/api/auth/mfa/correo/enviar", { token }),
   activarCorreo: (token: string, codigo: string) =>
     post<{ codigosRecuperacion: string[]; sesion: Sesion }>("/api/auth/mfa/correo/activar", { token, codigo }),
@@ -60,7 +60,7 @@ export const auth = {
   preferirMfa: (sesion: string, metodo: "app" | "correo") => post<MetodosMfa>("/api/auth/mfa/preferido", { metodo }, sesion),
   yo: (token: string) => get<Perfil>("/api/auth/yo", token),
   cambiarPasswordConSesion: (token: string, actual: string, nueva: string) =>
-    post<{ sesion: Sesion }>("/api/auth/password/cambiar", { actual, nueva }, token),
+    post<{ sesion: Sesion; codigosRecuperacion?: string[] | null }>("/api/auth/password/cambiar", { actual, nueva }, token),
   cambiarMfaIniciar: (token: string, password: string, codigo: string) =>
     post<{ secreto: string; uri: string }>("/api/auth/mfa/cambiar/iniciar", { password, codigo }, token),
   cambiarMfaConfirmar: (token: string, codigo: string) =>
