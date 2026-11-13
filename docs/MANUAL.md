@@ -134,6 +134,10 @@ configuradas siguen funcionando igual, aunque muestren el nombre anterior).
 
 Si tienes los dos métodos, la pantalla ofrece usar el otro.
 
+Cada dígito ocupa su propia casilla. Con la app autenticadora, el círculo bajo las casillas
+muestra cuántos segundos faltan para que la app cambie el código. El candado de arriba se abre
+cuando el código es correcto; si no lo es, tiembla y el mensaje explica qué pasó.
+
 **Perdí mi autenticador.** Sirve aunque nunca hayas activado el código por correo:
 
 ![Perdí mi autenticador: envío del código al correo](img/manual/15-perdi-autenticador.png)
@@ -355,13 +359,29 @@ tabla de la sección 4.
 ícono se dibuja el pulso durante un segundo y medio. En el navegador no aparece. El ícono del
 escritorio del teléfono no se anima: Android no lo permite a ninguna app.
 
+**¿Cómo uso el menú?** En el computador, **Compactar menú** (abajo a la izquierda) deja solo los
+íconos y **Extender menú** lo vuelve a abrir; al pasar el ratón por un ícono aparece su nombre. La
+plataforma recuerda tu elección en ese equipo. En el teléfono el menú es una barra abajo; en la
+cuenta admin, **Más** abre Administración.
+
+**¿Cómo instalo la app?** En Chrome o Edge (computador o Android) pulsa **Instalar app**, arriba a la
+derecha, o usa la opción **Instalar** del navegador. En iPhone abre la página en Safari y elige
+**Compartir → Agregar a inicio**. La app instalada abre en su propia ventana y se actualiza sola.
+
+**¿Qué significa "Sin conexión"?** Tu equipo perdió internet. La pantalla lo comprueba cada 8
+segundos y vuelve sola a la plataforma cuando hay conexión; también puedes pulsar **Reintentar
+ahora**.
+
+**¿Qué significa "Esta página no reporta"?** La dirección escrita no existe en la plataforma. Tu
+sesión sigue abierta: usa **Ir a Incidentes** o **Volver al inicio**.
+
 **¿Por qué mi alerta no abrió un incidente?** El valor debe superar el umbral durante 8 minutos
 seguidos; los picos breves se ignoran a propósito.
 
 **¿Cómo llego a ser gestor?** Desde tu nombre, arriba a la derecha → solicitar el rol de gestor.
 El admin lo aprueba o rechaza.
 
-**¿Qué significa la pantalla "Estamos en mantenimiento"?** El servicio o su base de datos no están respondiendo en ese momento. No se perdió nada: tus equipos, incidentes y mensajes siguen guardados, y ninguna acción quedó a medias (si no viste la confirmación, no se guardó). La pantalla se actualiza sola y vuelve a la normalidad apenas el servicio responda; también puedes reintentar más tarde.
+**¿Qué significa la pantalla "Estamos en mantenimiento"?** El servicio o su base de datos no están respondiendo en ese momento. No se perdió nada: tus equipos, incidentes y mensajes siguen guardados, y ninguna acción quedó a medias (si no viste la confirmación, no se guardó). La pantalla muestra una cuenta regresiva, lo comprueba cada 15 segundos y vuelve a la normalidad apenas el servicio responda; también puedes reintentar más tarde.
 
 ## 5. Seguridad: tu información protegida
 
