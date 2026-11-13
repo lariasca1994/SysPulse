@@ -2,27 +2,131 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <title>Monitoreo e incidentes TI — Sin conexión</title>
+    <title>Sin conexión · Monitoreo e incidentes TI</title>
+    <!-- Página autónoma que guarda el service worker: no carga nada externo. Los colores copian los de tokens.css. -->
     <style>
-      :root { color-scheme: light; --bg: #F4F6FA; --surface: #FFFFFF; --text: #0B1F3A; --muted: #4F5D73; --border: #DDE3EC; }
-      @media (prefers-color-scheme: dark) {
-        :root { color-scheme: dark; --bg: #07111F; --surface: #0E1B2E; --text: #E6EDF7; --muted: #A3B1C6; --border: #22344F; }
+      :root {
+        color-scheme: light;
+        --bg: #F4F6FA; --surface: #FFFFFF; --border: #DDE3EC;
+        --text: #0B1F3A; --muted: #4F5D73;
+        --nav: #0B2A5B; --nav-accent: #00C8FF; --accent: #00A9E0; --link: #006AA3; --pulse: #E1251B;
+        --primary: #0B3A7E; --primary-text: #FFFFFF; --primary-soft: rgba(11, 58, 126, .08);
       }
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; font-size: 14px; }
-      main { max-width: 420px; padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); text-align: center; }
-      h1 { margin: 16px 0 8px; font-size: 20px; }
-      p { margin: 0 0 16px; color: var(--muted); line-height: 1.5; }
-      button { min-height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #0B3A7E; color: #FFFFFF; font: inherit; cursor: pointer; }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --bg: #07111F; --surface: #0E1B2E; --border: #22344F;
+          --text: #E6EDF7; --muted: #A3B1C6;
+          --accent: #00C8FF; --link: #4FD1FF; --pulse: #FF4D3D;
+          --primary: #00C8FF; --primary-text: #04182F; --primary-soft: rgba(0, 200, 255, .1);
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center;
+        padding: calc(24px + env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px));
+        background: radial-gradient(560px 320px at 50% -6%, var(--primary-soft), transparent 72%), var(--bg);
+        color: var(--text); font: 14px/1.5 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+      }
+      main { display: grid; justify-items: center; gap: 12px; width: 100%; max-width: 440px; text-align: center; animation: entrar 150ms ease-out both; }
+      @keyframes entrar { from { opacity: 0; transform: translateY(8px); } }
+
+      .orbe { position: relative; display: grid; place-items: center; width: 120px; height: 120px; }
+      .orbe span { position: absolute; inset: 0; border: 1.5px dashed var(--accent); border-radius: 50%; opacity: 0; animation: buscar 3.6s ease-out infinite; }
+      .orbe span:nth-child(2) { animation-delay: 1.2s; }
+      .orbe span:nth-child(3) { animation-delay: 2.4s; }
+      @keyframes buscar { 0% { transform: scale(.5); opacity: 0; } 25% { opacity: .5; } 100% { transform: scale(1); opacity: 0; } }
+      .orbe b { position: relative; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--nav); color: var(--nav-accent); box-shadow: 0 8px 24px rgba(11, 31, 58, .18); }
+      .orbe svg { width: 28px; height: 28px; }
+      .orbe i { position: absolute; top: 12px; right: 12px; width: 9px; height: 9px; border-radius: 50%; background: var(--pulse); animation: latido 1.8s ease-in-out infinite; }
+      @keyframes latido { 50% { transform: scale(1.35); opacity: .7; } }
+
+      .etiqueta { margin: 4px 0 0; color: var(--link); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+      h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+      p { margin: 0; color: var(--muted); }
+
+      .senal { width: 100%; margin-top: 4px; padding: 10px 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font: 12px "IBM Plex Mono", ui-monospace, Consolas, monospace; color: var(--muted); }
+      .senal svg { display: block; width: 100%; height: 44px; }
+      .senal path { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .senal circle { fill: var(--pulse); }
+      .senal div { display: flex; justify-content: space-between; gap: 8px; padding: 6px 14px 0; }
+
+      .pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px; margin-top: 8px; }
+      .cuenta { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+      .cuenta svg { width: 22px; height: 22px; transform: rotate(-90deg); }
+      .cuenta circle { fill: none; stroke-width: 3; }
+      .cuenta .fondo { stroke: var(--border); }
+      .cuenta .valor { stroke: var(--accent); stroke-dasharray: 1; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+      button {
+        min-height: 44px; padding: 0 24px; border: 0; border-radius: 8px;
+        background: var(--primary); color: var(--primary-text); font: inherit; font-weight: 600; cursor: pointer;
+        transition: transform 120ms ease;
+      }
+      button:active:not(:disabled) { transform: scale(.97); }
+      button:disabled { cursor: progress; opacity: .7; }
+      button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+      @media (prefers-reduced-motion: reduce) {
+        main, .orbe span, .orbe i { animation: none; }
+        .orbe span { opacity: .3; }
+        .cuenta .valor, button { transition: none; }
+      }
     </style>
   </head>
   <body>
-    <main>
-      <img src="/icons/icon.svg" alt="" width="56" height="56" />
+    <main role="status" aria-live="polite">
+      <div class="orbe" aria-hidden="true">
+        <span></span><span></span><span></span>
+        <b>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h.01" /><path d="M8.5 16.43a5 5 0 0 1 7 0" /><path d="M5 12.86a10 10 0 0 1 5.17-2.69" /><path d="M19 12.86a10 10 0 0 0-2-1.5" /><path d="M2 8.82a15 15 0 0 1 4.17-2.65" /><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76" /><path d="m2 2 20 20" />
+          </svg>
+          <i></i>
+        </b>
+      </div>
+      <p class="etiqueta">Sin señal</p>
       <h1>Sin conexión</h1>
       <p>La plataforma necesita internet para mostrar datos en tiempo real. Los agentes siguen guardando lecturas y las enviarán al reconectar.</p>
-      <button type="button" onclick="location.reload()">Reintentar</button>
+
+      <div class="senal" aria-hidden="true">
+        <svg viewBox="0 0 280 44" preserveAspectRatio="none">
+          <path d="M6 26H40l6-14 8 24 6-18 4 8H100l6-14 8 24 6-18 4 8H272" />
+          <circle cx="272" cy="26" r="3.2" />
+        </svg>
+        <div><span>Tu equipo → plataforma</span><span>sin respuesta</span></div>
+      </div>
+
+      <div class="pie">
+        <span class="cuenta">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle class="fondo" cx="12" cy="12" r="9" /><circle id="valor" class="valor" cx="12" cy="12" r="9" pathLength="1" /></svg>
+          <span id="texto"></span>
+        </span>
+        <button type="button" id="reintentar">Reintentar ahora</button>
+      </div>
     </main>
+    <script>
+      // Cada 8 s pregunta (HEAD, el service worker no lo intercepta) si el sitio responde; si responde, recarga.
+      (function () {
+        var TOTAL = 8, resto = TOTAL, revisando = false;
+        var valor = document.getElementById("valor"), texto = document.getElementById("texto"), boton = document.getElementById("reintentar");
+        function pintar() {
+          valor.style.strokeDashoffset = revisando ? 0 : 1 - resto / TOTAL;
+          texto.textContent = revisando ? "Comprobando…" : "Reintento automático en " + resto + " s";
+        }
+        function revisar() {
+          if (revisando) return;
+          revisando = true; boton.disabled = true; pintar();
+          fetch("/", { method: "HEAD", cache: "no-store" })
+            .then(function (r) { if (r.ok) { location.reload(); return; } throw new Error("sin respuesta"); })
+            .catch(function () { revisando = false; boton.disabled = false; resto = TOTAL; pintar(); });
+        }
+        boton.addEventListener("click", revisar);
+        window.addEventListener("online", revisar);
+        setInterval(function () { if (revisando) return; resto = resto > 0 ? resto - 1 : 0; if (resto === 0) revisar(); else pintar(); }, 1000);
+        pintar();
+      })();
+    </script>
   </body>
 </html>

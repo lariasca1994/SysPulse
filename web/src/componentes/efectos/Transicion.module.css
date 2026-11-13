@@ -1,0 +1,25 @@
+/* Transición entre pantallas: 120 ms de salida y 150 ms de entrada (regla 8 de
+   la sección 7: transiciones de 150 ms como máximo), sin escalonado. */
+.sale {
+  animation: salir 120ms ease-in forwards;
+  pointer-events: none;
+}
+
+.entra {
+  animation: entrar var(--transicion-entrada) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes salir {
+  to { opacity: 0; transform: translateX(calc(var(--dir, 1) * -12px)); }
+}
+
+@keyframes entrar {
+  from { opacity: 0; transform: translateX(calc(var(--dir, 1) * 16px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sale,
+  .entra {
+    animation: none;
+  }
+}

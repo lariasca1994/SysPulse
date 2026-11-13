@@ -3,7 +3,7 @@
 // - Navegación primero por red; si no hay conexión, muestra offline.html.
 // - Sin push, sin background sync y sin consultas periódicas (regla de capas gratuitas).
 
-const VERSION = "syspulse-v1";
+const VERSION = "syspulse-v2";
 const PRECACHE = ["/", "/offline.html", "/manifest.webmanifest", "/icons/icon.svg"];
 
 self.addEventListener("install", (event) => {

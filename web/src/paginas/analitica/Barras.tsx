@@ -46,14 +46,19 @@ export function Barras({ categorias, series, alto = 240 }: { categorias: string[
   }, []);
 
   useEffect(() => {
+    const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     instancia.current?.setOption({
-      animation: false,
+      // Las barras crecen en 150 ms (regla 8); sin animación si se pidió reducir movimiento.
+      animation: !quieto,
+      animationDuration: 150,
+      animationDurationUpdate: 150,
+      animationEasing: "cubicOut",
       grid: { left: 4, right: 8, top: 32, bottom: 4, containLabel: true },
       legend: { top: 0, right: 0, textStyle: { color: c["--text-muted"], fontSize: 12 }, itemWidth: 12, itemHeight: 8 },
       tooltip: { trigger: "axis", backgroundColor: c["--surface"], borderColor: c["--border"], textStyle: { color: c["--text-muted"], fontSize: 12 } },
       xAxis: { type: "category", data: categorias, axisLine: { lineStyle: { color: c["--border"] } }, axisLabel: { color: c["--text-muted"], fontSize: 11, hideOverlap: true } },
       yAxis: { type: "value", minInterval: 1, splitNumber: 3, axisLabel: { color: c["--text-muted"], fontSize: 11 }, splitLine: { lineStyle: { color: c["--border"], type: "dashed" } } },
-      series: series.map((x) => ({ name: x.nombre, type: "bar", data: x.valores, barMaxWidth: 18, itemStyle: { color: c[x.color], borderRadius: [3, 3, 0, 0] } })),
+      series: series.map((x) => ({ name: x.nombre, type: "bar", data: x.valores, barMaxWidth: 18, itemStyle: { color: c[x.color], borderRadius: [3, 3, 0, 0] }, emphasis: { focus: "series" } })),
     }, { notMerge: true });
   }, [categorias, series, c]);
 

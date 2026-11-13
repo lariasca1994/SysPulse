@@ -612,3 +612,28 @@
     display: none;
   }
 }
+
+/* ───── Efectos: cada mensaje entra en 150 ms; los propios desde la derecha ───── */
+.mensaje,
+.sistema {
+  animation: llegar var(--transicion-entrada) ease-out both;
+}
+
+.mensaje[data-propio] {
+  --desde: 8px;
+}
+
+@keyframes llegar {
+  from { opacity: 0; transform: translate(var(--desde, -8px), 4px); }
+}
+
+.sistema {
+  --desde: 0px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mensaje,
+  .sistema {
+    animation: none;
+  }
+}

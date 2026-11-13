@@ -78,6 +78,10 @@
   --radius-lg: 12px;
 
   --transition: 150ms ease;
+  /* Movimiento (regla 8: transiciones de 150 ms como máximo; se apaga con prefers-reduced-motion). */
+  --transicion-salida: 120ms;
+  --transicion-entrada: 150ms;
+  --curva-rebote: cubic-bezier(0.3, 1.25, 0.5, 1);
 }
 
 :root[data-theme="dark"] {

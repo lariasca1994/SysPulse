@@ -39,3 +39,4 @@
   #arranque .surge, #arranque .sube, #arranque .arranque-nombre, #arranque .arranque-lema { opacity: 1 !important; transform: none !important; }
 }
 #arranque .latido { transform-box: fill-box; transform-origin: center; animation: arranque-surge .38s cubic-bezier(.34,1.56,.64,1) .75s forwards, arranque-latido 1.1s ease-in-out 1.15s infinite; transform: scale(0); }
+html.arrancando #root, html.arrancando #root * { animation-play-state: paused !important; }

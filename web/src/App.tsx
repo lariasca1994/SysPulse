@@ -5,6 +5,8 @@ import { useSesion } from "./sesionContexto";
 import Login from "./paginas/acceso/Login";
 import { LayoutApp } from "./componentes/LayoutApp";
 import { Mantenimiento } from "./componentes/Mantenimiento";
+import { MarcoAcceso } from "./paginas/acceso/LayoutAcceso";
+import NoEncontrada from "./componentes/NoEncontrada";
 
 // Las pantallas que no se ven al entrar se cargan bajo demanda (la PWA abre más rápido).
 const Registro = lazy(() => import("./paginas/acceso/Registro"));
@@ -43,16 +45,19 @@ export default function App() {
       <BrowserRouter>
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/login" element={<SoloInvitado><Login /></SoloInvitado>} />
-            <Route path="/registro" element={<SoloInvitado><Registro /></SoloInvitado>} />
-            <Route path="/registro/completar" element={<CompletarRegistro />} />
-            <Route path="/verificar-correo" element={<VerificarCorreo />} />
-            <Route path="/cambiar-password" element={<CambiarPassword />} />
-            <Route path="/mfa/configurar" element={<ConfigurarMfa />} />
-            <Route path="/mfa" element={<VerificarMfa />} />
-            <Route path="/mfa/recuperar" element={<RecuperarMfa />} />
-            <Route path="/olvide" element={<SoloInvitado><OlvidePassword /></SoloInvitado>} />
-            <Route path="/restablecer" element={<Restablecer />} />
+            {/* Acceso: el panel de marca queda fijo y solo cambian las tarjetas de cada paso. */}
+            <Route element={<MarcoAcceso />}>
+              <Route path="/login" element={<SoloInvitado><Login /></SoloInvitado>} />
+              <Route path="/registro" element={<SoloInvitado><Registro /></SoloInvitado>} />
+              <Route path="/registro/completar" element={<CompletarRegistro />} />
+              <Route path="/verificar-correo" element={<VerificarCorreo />} />
+              <Route path="/cambiar-password" element={<CambiarPassword />} />
+              <Route path="/mfa/configurar" element={<ConfigurarMfa />} />
+              <Route path="/mfa" element={<VerificarMfa />} />
+              <Route path="/mfa/recuperar" element={<RecuperarMfa />} />
+              <Route path="/olvide" element={<SoloInvitado><OlvidePassword /></SoloInvitado>} />
+              <Route path="/restablecer" element={<Restablecer />} />
+            </Route>
             <Route element={<Protegida><LayoutApp /></Protegida>}>
               <Route index element={<Navigate to="/turno" replace />} />
               <Route path="/hosts" element={<Suspense fallback={null}><SaludHosts /></Suspense>} />
@@ -66,7 +71,8 @@ export default function App() {
               <Route path="/perfil" element={<Suspense fallback={null}><Perfil /></Suspense>} />
               <Route path="/analitica" element={<Suspense fallback={null}><Analitica /></Suspense>} />
             </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Cualquier otra dirección: el 404 propio (monitor con el pulso aplanado). */}
+            <Route path="*" element={<NoEncontrada />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

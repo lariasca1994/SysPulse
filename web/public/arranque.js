@@ -29,11 +29,14 @@
   var maximo = 1600;
   var cerrado = false;
   el.hidden = false;
+  // Mientras se ve la entrada, las animaciones de la app quedan en pausa para que no se pierdan detrás.
+  document.documentElement.classList.add("arrancando");
 
   function cerrar() {
     if (cerrado) return;
     cerrado = true;
     el.className += " arranque-salida";
+    document.documentElement.classList.remove("arrancando");
     window.setTimeout(function () {
       if (el.parentNode) el.parentNode.removeChild(el);
     }, 320);

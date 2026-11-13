@@ -162,7 +162,7 @@ select.control {
 }
 
 .boton:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: scale(0.97);
 }
 
 .boton:disabled {
@@ -268,4 +268,174 @@ select.control {
   padding-block: 10px;
   line-height: 1.5;
   resize: vertical;
+}
+
+/* ───── Código de 6 dígitos en casillas (el <input> real queda encima, transparente) ───── */
+.casillas {
+  position: relative;
+}
+
+.casillasCampo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: var(--fs-16);
+  outline: none;
+}
+
+.casillasVista {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+.casillasVista span {
+  display: grid;
+  place-items: center;
+  height: 52px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-24);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: border-color var(--transition), background var(--transition), transform var(--transition), box-shadow var(--transition);
+}
+
+.casillasVista span[data-llena] {
+  border-color: var(--link);
+  background: var(--surface);
+  animation: marcar 150ms ease-out;
+}
+
+.casillasVista span[data-activa] {
+  border-color: var(--link);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--link) 22%, transparent);
+}
+
+.casillasVista span[data-activa]:empty::after {
+  content: "";
+  width: 2px;
+  height: 24px;
+  background: var(--link);
+  animation: parpadeo 1s steps(1) infinite;
+}
+
+.casillas[data-error] .casillasVista span {
+  border-color: var(--critical);
+}
+
+@keyframes marcar {
+  50% { transform: scale(1.08); }
+}
+
+@keyframes parpadeo {
+  50% { opacity: 0; }
+}
+
+@media (max-width: 380px) {
+  .casillasVista {
+    gap: var(--sp-1);
+  }
+
+  .casillasVista span {
+    height: 46px;
+    font-size: var(--fs-20);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .casillasVista span {
+    transition: none;
+    animation: none !important;
+  }
+}
+
+/* ───── Efectos de los botones (150 ms como máximo; se apagan con prefers-reduced-motion) ───── */
+.boton {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Reflejo de luz que cruza el botón al pasar el ratón. */
+.boton::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  z-index: -1;
+  width: 45%;
+  background: linear-gradient(105deg, transparent, color-mix(in srgb, var(--primary-text) 28%, transparent), transparent);
+  opacity: 0;
+  pointer-events: none;
+  transform: skewX(-18deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .primario:hover:not(:disabled)::before {
+    animation: reflejo var(--transicion-entrada) ease-out;
+  }
+}
+
+@keyframes reflejo {
+  from { opacity: 1; transform: skewX(-18deg) translateX(0); }
+  to { opacity: 0; transform: skewX(-18deg) translateX(420%); }
+}
+
+/* Onda desde el punto del toque. */
+.onda {
+  position: absolute;
+  top: var(--y);
+  left: var(--x);
+  width: var(--d);
+  height: var(--d);
+  margin: calc(var(--d) / -2) 0 0 calc(var(--d) / -2);
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.22;
+  pointer-events: none;
+  transform: scale(0);
+  animation: onda var(--transicion-entrada) ease-out forwards;
+}
+
+@keyframes onda {
+  to { transform: scale(1); opacity: 0; }
+}
+
+/* Temblor corto del botón cuando aparece un error. */
+.temblor {
+  animation: temblor 75ms ease-in-out 2;
+}
+
+@keyframes temblor {
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* Los avisos entran deslizándose. */
+.alerta {
+  animation: aparecer var(--transicion-entrada) ease-out both;
+}
+
+@keyframes aparecer {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boton::before,
+  .onda,
+  .temblor,
+  .alerta {
+    animation: none !important;
+  }
 }

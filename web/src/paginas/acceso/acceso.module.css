@@ -513,3 +513,9 @@
 .perdiAutenticador:hover {
   text-decoration: underline;
 }
+
+/* Envoltura de cada tarjeta durante la transición entre pasos (mismo ancho que la tarjeta). */
+.envoltura {
+  width: 100%;
+  max-width: 440px;
+}

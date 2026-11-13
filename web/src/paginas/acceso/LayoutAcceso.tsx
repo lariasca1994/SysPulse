@@ -1,12 +1,21 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Activity, BellRing, ShieldCheck } from "lucide-react";
 import { BotonTema } from "../../componentes/BotonTema";
+import { TransicionRutas } from "../../componentes/efectos/Transicion";
+import { Candado, type EstadoCandado } from "./Candado";
 import s from "./acceso.module.css";
 
 const ANIO = new Date().getFullYear();
 
-/** Estructura común de inicio de sesión, registro y verificaciones. */
-export function LayoutAcceso({ paso, titulo, subtitulo, children }: { paso?: string; titulo: string; subtitulo?: ReactNode; children: ReactNode }) {
+/** Orden de los pasos del acceso: define hacia dónde entra la tarjeta nueva. */
+const ORDEN_ACCESO = ["/login", "/mfa", "/mfa/configurar", "/mfa/recuperar", "/olvide", "/restablecer", "/cambiar-password", "/registro", "/verificar-correo"];
+
+/**
+ * Portada común de inicio de sesión, registro y verificaciones: el panel de marca
+ * queda fijo y solo cambian las tarjetas de cada paso, con la transición de la
+ * plataforma (150 ms como máximo). El diseño es el de siempre.
+ */
+export function MarcoAcceso() {
   return (
     <div className={s.pantalla}>
       <div className={s.tema}>
@@ -49,15 +58,23 @@ export function LayoutAcceso({ paso, titulo, subtitulo, children }: { paso?: str
       </aside>
 
       <main className={s.lado}>
-        <section className={s.tarjeta} aria-labelledby="titulo-acceso">
-          <header className={s.encabezado}>
-            {paso && <p className={s.paso}>{paso}</p>}
-            <h1 id="titulo-acceso" className={s.tituloForm}>{titulo}</h1>
-            {subtitulo && <p className={s.subtitulo}>{subtitulo}</p>}
-          </header>
-          {children}
-        </section>
+        <TransicionRutas orden={ORDEN_ACCESO} className={s.envoltura} envolver={(c) => <Suspense fallback={null}>{c}</Suspense>} />
       </main>
     </div>
+  );
+}
+
+/** Tarjeta de un paso del acceso. En el paso del código lleva el candado pequeño sobre el título. */
+export function LayoutAcceso({ paso, titulo, subtitulo, children, candado }: { paso?: string; titulo: string; subtitulo?: ReactNode; children: ReactNode; candado?: EstadoCandado }) {
+  return (
+    <section className={s.tarjeta} aria-labelledby="titulo-acceso">
+      <header className={s.encabezado}>
+        {candado && <Candado estado={candado} />}
+        {paso && <p className={s.paso}>{paso}</p>}
+        <h1 id="titulo-acceso" className={s.tituloForm}>{titulo}</h1>
+        {subtitulo && <p className={s.subtitulo}>{subtitulo}</p>}
+      </header>
+      {children}
+    </section>
   );
 }
