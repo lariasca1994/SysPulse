@@ -7,6 +7,8 @@ import { useSesion } from "../../sesionContexto";
 import { Alerta, Boton } from "../../componentes/ui/Basicos";
 import { Campo, CampoCodigo } from "../../componentes/ui/Campos";
 import { LayoutAcceso } from "./LayoutAcceso";
+import { AnilloCodigo } from "./AnilloCodigo";
+import type { EstadoCandado } from "./Candado";
 import { CodigosRecuperacion } from "./CodigosRecuperacion";
 import { hayCodigosNuevos } from "./recuperacion";
 import s from "./acceso.module.css";
@@ -31,6 +33,8 @@ export default function VerificarMfa() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+  // Candado sobre el título: se abre con el código correcto y se sacude con uno equivocado.
+  const [candado, setCandado] = useState<EstadoCandado>("normal");
   const enviado = useRef(false);
   // Tras "Olvidé mi contraseña" la API entrega aquí, una sola vez, los códigos de recuperación nuevos.
   const [nuevos, setNuevos] = useState<{ sesion: Sesion; codigos: string[] } | null>(null);
@@ -58,8 +62,12 @@ export default function VerificarMfa() {
     e.preventDefault();
     setError(null);
     setCargando(true);
+    setCandado("verificando");
     try {
       const r = await auth.verificarMfa(token!, codigo, modo === "recuperacion" ? undefined : modo);
+      setCandado("abierto");
+      // El candado se abre (150 ms) antes de seguir.
+      await new Promise((listo) => window.setTimeout(listo, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 150));
       if (hayCodigosNuevos(r.codigosRecuperacion)) {
         setNuevos({ sesion: r.sesion, codigos: r.codigosRecuperacion });
         return;
@@ -69,6 +77,8 @@ export default function VerificarMfa() {
     } catch (err) {
       setError(esFalla(err) ? err.detalle.mensaje : "No se pudo verificar.");
       setCodigo("");
+      setCandado("error");
+      window.setTimeout(() => setCandado("normal"), 700);
     } finally {
       setCargando(false);
     }
@@ -94,7 +104,7 @@ export default function VerificarMfa() {
   }
 
   return (
-    <LayoutAcceso paso="Segundo factor" titulo="Ingresa tu código" subtitulo={SUBTITULOS[modo]}>
+    <LayoutAcceso paso="Segundo factor" titulo="Ingresa tu código" subtitulo={SUBTITULOS[modo]} candado={candado}>
       <form className={s.formulario} onSubmit={enviar} noValidate>
         {aviso && modo === "correo" && <Alerta tipo="info">{aviso}</Alerta>}
         {error && <Alerta tipo="error">{error}</Alerta>}
@@ -103,6 +113,7 @@ export default function VerificarMfa() {
         ) : (
           <CampoCodigo etiqueta="Código de 6 dígitos" value={codigo} onChange={setCodigo} autoFocus />
         )}
+        {modo === "app" && <AnilloCodigo />}
         <Boton type="submit" ancho cargando={cargando} disabled={!listo}>
           {!cargando && <ShieldCheck size={18} aria-hidden="true" />} Verificar
         </Boton>

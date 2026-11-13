@@ -1,4 +1,4 @@
-import { useId, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { useId, useState, type FocusEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { ETIQUETA_FUERZA, fuerzaPassword } from "./fuerza";
 import s from "./ui.module.css";
@@ -130,23 +130,39 @@ export function CampoPassword({
   );
 }
 
-/** Código de 6 dígitos (Telegram o app autenticadora). Pega/autocompleta el código de un solo uso. */
-export function CampoCodigo({ etiqueta, error, ayuda, value, onChange, ...input }: PropsBase & Omit<InputHTMLAttributes<HTMLInputElement>, "onChange"> & { onChange: (v: string) => void }) {
+/**
+ * Código de 6 dígitos (Telegram o app autenticadora). Pega/autocompleta el código de un
+ * solo uso. Se ve como seis casillas: cada una se marca al escribir y la activa lleva el
+ * cursor; debajo sigue el mismo <input> etiquetado (lector de pantalla, pegar, pruebas).
+ */
+export function CampoCodigo({ etiqueta, error, ayuda, value, onChange, onFocus, onBlur, ...input }: PropsBase & Omit<InputHTMLAttributes<HTMLInputElement>, "onChange"> & { onChange: (v: string) => void }) {
   const id = useId();
+  const [foco, setFoco] = useState(false);
+  const texto = String(value ?? "");
   return (
     <Contenedor id={id} etiqueta={etiqueta} error={error} ayuda={ayuda}>
-      <input
-        id={id}
-        className={`${s.control} ${s.codigo}`}
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        maxLength={6}
-        placeholder="••••••"
-        aria-invalid={error ? true : undefined}
-        value={value}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 6))}
-        {...input}
-      />
+      <div className={s.casillas} data-error={error ? "" : undefined}>
+        <input
+          id={id}
+          className={s.casillasCampo}
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          aria-invalid={error ? true : undefined}
+          value={value}
+          onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          onFocus={(e: FocusEvent<HTMLInputElement>) => { setFoco(true); onFocus?.(e); }}
+          onBlur={(e: FocusEvent<HTMLInputElement>) => { setFoco(false); onBlur?.(e); }}
+          {...input}
+        />
+        <div className={s.casillasVista} aria-hidden="true">
+          {Array.from({ length: 6 }, (_, i) => (
+            <span key={i} data-llena={texto[i] ? "" : undefined} data-activa={foco && i === Math.min(texto.length, 5) ? "" : undefined}>
+              {texto[i] ?? ""}
+            </span>
+          ))}
+        </div>
+      </div>
     </Contenedor>
   );
 }

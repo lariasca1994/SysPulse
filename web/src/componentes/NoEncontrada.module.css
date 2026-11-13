@@ -1,0 +1,171 @@
+/* 404 de SysPulse (solo tokens). Entra en 150 ms; la línea del pulso ya está dibujada. */
+.pantalla {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--sp-6) var(--sp-4);
+  background: var(--bg);
+  color: var(--text);
+  animation: entrar var(--transicion-entrada) ease-out both;
+}
+
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+.contenido {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: var(--sp-8);
+  align-items: center;
+  width: 100%;
+  max-width: 720px;
+}
+
+.monitor {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+}
+
+.cabecera,
+.pie {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  color: var(--text-muted);
+}
+
+.cabecera {
+  border-bottom: 1px solid var(--border);
+}
+
+.cabecera span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cabecera b {
+  color: var(--critical);
+}
+
+.pie {
+  border-top: 1px solid var(--border);
+}
+
+.pie span:last-child {
+  color: var(--text);
+}
+
+.pantallaMonitor {
+  padding: var(--sp-3) 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-position: -1px -1px;
+  background-size: 16px 16px;
+}
+
+.ecg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ecg path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* El único rojo: el punto final del pulso. */
+.ecg circle {
+  fill: var(--pulse);
+}
+
+.texto {
+  display: grid;
+  gap: var(--sp-3);
+  justify-items: start;
+}
+
+.texto h1 {
+  font-size: var(--fs-24);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.texto p {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.texto code {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+  overflow-wrap: anywhere;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+}
+
+.primario,
+.secundario {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 44px;
+  padding: 0 var(--sp-4);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.primario {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+.primario:hover {
+  background: var(--primary-hover);
+}
+
+.secundario {
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+}
+
+.secundario:hover {
+  border-color: var(--link);
+}
+
+@media (max-width: 680px) {
+  .contenido {
+    grid-template-columns: 1fr;
+    gap: var(--sp-6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pantalla {
+    animation: none;
+  }
+}

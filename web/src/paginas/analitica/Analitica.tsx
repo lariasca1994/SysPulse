@@ -6,6 +6,7 @@ import { useConsulta } from "../../api/useConsulta";
 import { Alerta } from "../../componentes/ui/Basicos";
 import { InsigniaPrioridad } from "../incidentes/Piezas";
 import type { Prioridad } from "../../api/incidentes";
+import { Cifra } from "../../componentes/efectos/Cifra";
 import { Barras } from "./Barras";
 import h from "../hosts/hosts.module.css";
 import s from "./analitica.module.css";
@@ -195,7 +196,7 @@ function Indicador({ icono, titulo, valor, detalle, tono = "neutro" }: { icono: 
       <span className={s.indicadorIcono} aria-hidden="true">{icono}</span>
       <div>
         <p className={s.indicadorTitulo}>{titulo}</p>
-        <p className={`${s.indicadorValor} num`}>{valor}</p>
+        <p className={`${s.indicadorValor} num`} aria-label={valor}><Cifra valor={valor} /></p>
         <p className={s.indicadorDetalle}>{detalle}</p>
       </div>
     </div>
