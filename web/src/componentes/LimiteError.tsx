@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { AlertCircle } from "lucide-react";
+import { esFallaDeCarga, recargarPorDespliegue } from "../recargaDespliegue";
 import s from "./LimiteError.module.css";
 
 /** Si una pantalla falla, se muestra un aviso en su lugar en vez de dejar toda la aplicación en blanco. Se reinicia al navegar (el layout le pasa la ruta como key). */
@@ -8,6 +9,12 @@ export class LimiteError extends Component<{ children: ReactNode }, { error: boo
 
   static getDerivedStateFromError() {
     return { error: true };
+  }
+
+  // Si falló por un archivo de una versión anterior (hubo un despliegue con la app abierta),
+  // se recarga sola una vez en vez de mostrar el aviso.
+  componentDidCatch(error: unknown) {
+    if (esFallaDeCarga(error)) recargarPorDespliegue();
   }
 
   render() {
