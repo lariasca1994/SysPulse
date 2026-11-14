@@ -7,8 +7,10 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "./styles/global.css";
 import App from "./App";
 import { registrarServiceWorker } from "./pwa";
+import { vigilarDespliegues } from "./recargaDespliegue";
 
 registrarServiceWorker();
+vigilarDespliegues();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
