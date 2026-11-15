@@ -55,7 +55,7 @@ SysPulse es una plataforma de **operaciones de TI** que une en un solo lugar lo 
 ```
 [Equipo propio — Windows 11]  ← host monitoreado
   SysPulse.Agent (.NET 10 Worker Service, servicio de Windows, inicio automático)
-    ├─ cada 60 s   → lectura cruda → SQLite (se conserva 48 h)
+    ├─ cada 60 s   → lectura cruda → SQLite (depuración automática)
     ├─ cada 5 min  → chequeos de red (TCP, ping, DNS) + agregado min/avg/max/p95 → cola SQLite
     ├─ cada 30 min → lote (insertMany) → MongoDB Atlas (DIRECTO, sin pasar por Render)
     ├─ cada 60 s   → sobrescribe 1 documento estado_actual → MongoDB Atlas
@@ -541,7 +541,7 @@ La analítica es lo que lleva el proyecto de "herramienta de soporte" a "platafo
 | Cálculo | Dónde | Por qué |
 |---|---|---|
 | Pronóstico y anomalías (ML.NET) | **Agente, en el equipo, una vez al día** (o al arrancar si quedó pendiente) con los datos de SQLite y el histórico | CPU local gratis; Render no se despierta |
-| Resumen diario (min/avg/max/p95 por métrica, disponibilidad del día) | Agente → colección `resumen_diario` | Los paneles de 30–90 días leen ~90 documentos, no ~26 000 |
+| Resumen diario (min/avg/max/p95 por métrica, disponibilidad del día) | Agente → colección `resumen_diario` | Los paneles leen un documento por día, no miles de agregados |
 | Indicadores ITIL y DORA | API, **al consultar**, con aggregation pipeline (`$group`, `$setWindowFields`, `$percentile`) | Sin jobs periódicos |
 | Caché de resultados | API, 5 minutos en memoria | Evita recalcular al refrescar |
 
@@ -590,7 +590,7 @@ Unen desarrollo y soporte con datos reales de los despliegues de GitHub Actions 
 
 ### 8.6 Calidad estadística y niveles de servicio
 
-- **SLO y presupuesto de error**: por ejemplo, disponibilidad del 99,5 % en una ventana móvil de 30 días; muestra cuánto presupuesto queda y la **tasa de consumo** (burn rate). Regla: presupuesto agotado → congelar cambios normales.
+- **SLO y presupuesto de error**: por ejemplo, disponibilidad del 99,5 % en una ventana móvil dentro de la retención; muestra cuánto presupuesto queda y la **tasa de consumo** (burn rate). Regla: presupuesto agotado → congelar cambios normales.
 - **Gráficos de control (SPC)**: carta X-mR para MTTR y tiempo de respuesta, con límites de control (±3σ) y reglas de Western Electric para detectar procesos fuera de control.
 - **Pareto** de categorías de incidentes y de causas raíz (80/20).
 
@@ -598,7 +598,7 @@ Unen desarrollo y soporte con datos reales de los despliegues de GitHub Actions 
 
 Pestañas: **Capacidad** · **Anomalías** · **Operación ITIL** · **Cambios (DORA)** · **Calidad del servicio** (SLO, control, Pareto).
 
-- El período se elige con **filtros dinámicos** (últimos 7, 30, 90 días o período personalizado). **Ninguna fecha ni mes fijo** en títulos, etiquetas o filtros.
+- El período se elige con **filtros dinámicos** (períodos predefinidos dentro de la retención). **Ninguna fecha ni mes fijo** en títulos, etiquetas o filtros.
 - Cada gráfica tiene un texto de lectura en lenguaje natural ("El MTTR bajó 18 % frente al período anterior").
 
 ### 8.8 Reporte operativo
@@ -616,12 +616,12 @@ usuarios            { nombre, email, email_verificado, rol: N1|N2|N3|gestor|admi
                       intentos_fallidos, bloqueado_hasta, activo, avatar, ultima_conexion,
                       telegram{ usuario?, telefono_cifrado?, chat_id, verificado, verificado_en },
                       notificar{ correo: bool, telegram: bool } }
-telegram_verificaciones { usuario_id, token_inicio, codigo_hash, intentos, expira }  ← TTL 1 hora
+telegram_verificaciones { usuario_id, token_inicio, codigo_hash, intentos, expira }  ← TTL
 notificaciones      { clave_dedup, registro_id, nivel, motivo: apertura|escalamiento|jerarquico|p1|cierre,
-                      usuario_id, canal, estado: enviado|fallido, enviado }  ← TTL 30 días
+                      usuario_id, canal, estado: enviado|fallido, enviado }  ← depuración automática
 solicitudes_rol     { usuario_id, rol_solicitado: gestor, motivo, estado: pendiente|aprobada|rechazada|revocada,
                       resuelto_por, comentario, creado, resuelto }
-auditoria           { usuario_id, accion, entidad, entidad_id, antes{}, despues{}, ip, ts }  ← solo inserción
+auditoria           { usuario_id, accion, entidad, entidad_id, antes{}, despues{}, ip, ts }  ← solo inserción; depuración automática
 salas               { tipo: general|evento|solicitud|problema|cambio|mayor|turno, ref_id, participantes[], estado }
 mensajes            { sala_id, autor_id, tipo: humano|sistema|plantilla, texto, plantilla_id, campos{},
                       responde_a, menciones[], adjuntos[], visibilidad: interna|visible, editado, eliminado, creado }
@@ -641,13 +641,13 @@ cambios             { tipo: estandar|normal|emergencia, origen_ref, version, com
 plantillas          { id, nombre, tipo, campos_requeridos[], cuerpo }   ← semilla desde plantillas.yaml
 catalogo            { id, nombre, requiere_aprobacion, procedimiento, tiempo_objetivo }
 metricas_5m         { host, tipo_host, ts, cpu{}, ram{}, paginacion{}, disco{}, red{}, procesos{}, servicios{},
-                      bateria{}, termico{} }  ← campos según el tipo de host; TTL 90 días
-latencia_5m         { host, destino, ts, rtt_avg, rtt_p95, jitter, perdida }                     ← TTL 90 días
+                      bateria{}, termico{} }  ← campos según el tipo de host; depuración automática
+latencia_5m         { host, destino, ts, rtt_avg, rtt_p95, jitter, perdida }                     ← depuración automática
 estado_actual       { host, ts, ...última lectura }                                              ← 1 doc por host
 hosts               { id (anónimo: win-xxxxxxxxxx / and-xxxxxxxxxx), tipo: windows|android, version_agente, ultimo_arranque }
                     ← sin nombre del equipo ni fabricante/modelo: la plataforma muestra un nombre genérico por tipo
                       ("Equipo de escritorio", "Equipo portátil", "Celular"), numerado si hay varios
-resumen_diario      { host, fecha, metricas{min,avg,max,p95}, disponibilidad, anomalias, pronostico{} } ← TTL 2 años
+resumen_diario      { host, fecha, metricas{min,avg,max,p95}, disponibilidad, anomalias, pronostico{} } ← depuración automática
 ```
 
 **Índices clave:** `mensajes(sala_id, _id)`, `salas_lectura(sala_id, usuario_id)` único, `eventos(clave_dedup, estado)`, `metricas_5m(host, ts)` + TTL, `cambios(estado, creado)`.
@@ -661,7 +661,7 @@ resumen_diario      { host, fecha, metricas{min,avg,max,p95}, disponibilidad, an
 | **Render: 750 h/mes compartidas por el workspace** | Un servicio despierto 24/7 agota las horas y suspende todos los servicios gratuitos | El agente escribe directo en Atlas; Render solo se despierta por uso humano, eventos de excepción o el reporte semanal. Revisar el consumo de horas del workspace antes de desplegar |
 | **Render: 5 GB de ancho de banda compartido** | Adjuntos y WebSocket | Adjuntos por Cloudinary; WebSocket solo con valores que cambian; pausar con la pestaña oculta; cerrar tras 15 min inactivo |
 | **Render: arranque en frío ~1 min** | Mala primera impresión | Pantalla "Iniciando servicio…" en el frontend |
-| **Atlas M0: 512 MB** | Crecimiento sin límite | Agregados de 5 min, TTL 90 días, `resumen_diario` para períodos largos, top procesos solo como foto |
+| **Atlas M0: 512 MB** | Crecimiento sin límite | Agregados de 5 min, depuración automática de todo registro con fecha (regla obligatoria del portafolio), top procesos solo como foto |
 | **Equipo propio: disco y recursos** | El agente no debe estorbar el uso normal del equipo | Lotes cada 30 min; SQLite crudo 48 h + `VACUUM` semanal; logs de Serilog con rotación (7 archivos × 10 MB); prioridad de proceso `BelowNormal`; análisis ML.NET solo con el equipo inactivo o al arrancar |
 | **Brevo: 300 correos/día** | Correo por lectura | Correo por registro (abrir, escalar, cerrar) y reporte semanal; enfriamiento de 30 min por clave; vía API HTTP (Render gratuito bloquea SMTP) |
 | **Telegram Bot API** | 1 mensaje/s por chat, ~30/s en total | Agrupar avisos simultáneos en un solo mensaje por usuario; webhook solo para vincular cuentas |
@@ -790,7 +790,7 @@ Objetivo: que ningún usuario, por error o mala intención, pueda causar daños 
 - **Mínimo privilegio en la base:** el usuario de Atlas de la API tiene acceso solo a la base `syspulse`, sin permisos de administración del clúster. Si M0 permite roles personalizados, se le quitan `dropCollection` y `dropDatabase`.
 - **API key del agente** solo puede escribir eventos y métricas; no lee ni modifica nada más.
 - **Límite de escrituras** por usuario (rate limiting) para evitar que un error o un script llene la base.
-- **Respaldo semanal gratuito:** Atlas M0 no tiene backups; el agente exporta en C# las colecciones de negocio (no métricas) a JSON comprimido en `%ProgramData%\SysPulse\respaldos` y conserva las últimas 4 copias.
+- **Respaldo semanal gratuito:** Atlas M0 no tiene backups; el agente exporta en C# las colecciones de negocio (no métricas) a JSON comprimido en `%ProgramData%\SysPulse\respaldos` y conserva solo las copias dentro de la retención.
 
 ### Registro de cuentas, contraseña y MFA
 
@@ -853,7 +853,7 @@ La API de bots de Telegram **no permite que un bot escriba primero** a un @usuar
 
 ### Alta de equipos y seguridad de los instaladores
 
-- **Alta con código:** un técnico N2 o N3 o el admin genera en la web (Salud de hosts → Agregar equipo, o Administración → Equipos) un código de un solo uso que vence en 24 h; solo se guarda su huella. El instalador de Windows (`install --codigo`) y la app Android (Vincular) lo canjean en `POST /api/agentes/alta` (limitado por IP) y reciben su configuración, que guardan cifrada (DPAPI / Android Keystore).
+- **Alta con código:** un técnico N2 o N3 o el admin genera en la web (Salud de hosts → Agregar equipo, o Administración → Equipos) un código de un solo uso con vencimiento; solo se guarda su huella. El instalador de Windows (`install --codigo`) y la app Android (Vincular) lo canjean en `POST /api/agentes/alta` (limitado por IP) y reciben su configuración, que guardan cifrada (DPAPI / Android Keystore).
 - **Instaladores públicos sin secretos ni funciones de administración:** las herramientas de administración (`config-central`, `publicar-version`, `mongo-estandar`) viven en `tools/SysPulse.Herramientas`, que no se publica. Los binarios se compilan sin rutas del equipo de compilación y el APK sin modo de depuración. `tools/escanear-secretos.ps1` es obligatorio antes de cada publicación.
 - **Nombres estables:** cada equipo recibe un nombre genérico con número fijo por tipo (colección `hosts_alias`); agregar equipos no renombra a los existentes. Retirar un equipo lo oculta sin borrar su historial.
 - **Usuario de base exclusivo para agentes (obligatorio):** las altas entregan solo `MONGO_URI_AGENTES` y `MONGO_URI_AGENTES_ANDROID`; sin ellas, `POST /api/agentes/alta` responde 503 y no gasta el código. Nunca se entrega `MONGO_URI` (la de la API).

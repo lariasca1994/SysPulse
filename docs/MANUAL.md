@@ -117,7 +117,7 @@ Qué servicio de nube, base de datos o API usa el proyecto y para qué sirve cad
 | Método | Cómo funciona |
 |---|---|
 | **App autenticadora** (recomendado) | Escaneas el QR con Google Authenticator, Microsoft Authenticator u otra app; la app muestra un código nuevo cada 30 segundos, incluso sin internet. Si no puedes escanear, escribe la clave que aparece bajo el QR. |
-| **Código por correo** | Cada vez que ingresas te llega un código de 6 dígitos que vence en 10 minutos y sirve una sola vez. Puedes pedir hasta 3 códigos cada 10 minutos (**Enviar un código nuevo**). |
+| **Código por correo** | Cada vez que ingresas te llega un código de 6 dígitos que vence pronto y sirve una sola vez. Si no llega, pide otro con **Enviar un código nuevo** (hay un límite de envíos). |
 
 Escribe el primer código, pulsa **Activar** y **guarda los 10 códigos de recuperación**. En la app
 autenticadora la cuenta aparece como **Monitoreo e incidentes TI** (las cuentas que ya tenías
@@ -144,7 +144,7 @@ cuando el código es correcto; si no lo es, tiembla y el mensaje explica qué pa
 
 | # | Paso | Qué pasa |
 |:-:|---|---|
-| 1 | Enviar código a mi correo | Llega un código de 6 dígitos al correo de tu cuenta; vence en 15 minutos y sirve una vez. Si no llega, **Enviar un código nuevo** (hay un límite de envíos) |
+| 1 | Enviar código a mi correo | Llega un código de 6 dígitos al correo de tu cuenta; vence pronto y sirve una vez. Si no llega, **Enviar un código nuevo** (hay un límite de envíos) |
 | 2 | Volver | Si aún tienes un código de recuperación, puedes usarlo en lugar de este flujo |
 
 Con el código correcto pasas directo a **Configura tu autenticador nuevo**: escanea el QR con la
@@ -181,7 +181,7 @@ administrador.
 | 2 | Enviar enlace | Envía el enlace de restablecimiento |
 
 La respuesta es la misma exista o no la cuenta (no revela qué correos están registrados). El
-enlace llega por correo, vence en 1 hora y sirve una sola vez. Al abrirlo:
+enlace llega por correo, vence pronto y sirve una sola vez. Al abrirlo:
 
 ![Crear una contraseña nueva](img/manual/14-restablecer.png)
 
@@ -274,7 +274,7 @@ incidente, su sala queda de solo lectura. Abajo a la izquierda ves quién está 
 
 ![Analítica ITIL](img/manual/11-analitica.png)
 
-Elige el período (7, 30 o 90 días):
+Elige el período:
 
 | Bloque | Qué mide |
 |---|---|
@@ -320,7 +320,7 @@ SLA por prioridad:
 ### 4.11 Agregar un equipo
 
 1. Si eres **N2 o N3**, pulsa **Agregar equipo** en **Salud de hosts** (también está en
-   **Administración → Equipos**) y obtienes un **código de un solo uso** que vence en 24 horas. N1 y
+   **Administración → Equipos**) y obtienes un **código de un solo uso** con vencimiento. N1 y
    gestor no ven el botón: pídele el código a un técnico N2 o N3.
 2. **Windows:** descarga el agente desde GitHub Releases y, en PowerShell como administrador,
    ejecuta `.\SysPulse.AgentInstaller.exe install --codigo XXXX-XXXX`.
@@ -397,10 +397,10 @@ Tu confianza es lo primero: la plataforma solo pide los datos necesarios para fu
 | Usuario o número de Telegram | Enviarte los avisos de tu nivel | MongoDB Atlas | Se verifica con un código del bot |
 | Contraseña | Iniciar sesión | MongoDB Atlas, **solo su huella** | No se puede leer ni recuperar |
 | Secreto de la app autenticadora | Segundo factor | MongoDB Atlas, **cifrado** | Nadie desde la aplicación |
-| Código por correo | Segundo factor | MongoDB Atlas, **solo su huella** (10 minutos) | Nadie: no se puede leer |
-| Código de «Perdí mi autenticador» | Configurar un autenticador nuevo | MongoDB Atlas, **solo su huella** (15 minutos) | Un solo uso; no sirve para entrar sin configurar el autenticador nuevo |
+| Código por correo | Segundo factor | MongoDB Atlas, **solo su huella** (vigencia corta) | Nadie: no se puede leer |
+| Código de «Perdí mi autenticador» | Configurar un autenticador nuevo | MongoDB Atlas, **solo su huella** (vigencia corta) | Un solo uso; no sirve para entrar sin configurar el autenticador nuevo |
 | Códigos de recuperación y enlaces | Recuperar el acceso | Solo su huella SHA-256 | Un solo uso, con límite de intentos |
-| Sesión | Mantenerte conectado | `sessionStorage` del navegador | Se borra al cerrar la pestaña; dura 8 horas |
+| Sesión | Mantenerte conectado | `sessionStorage` del navegador | Se borra al cerrar la pestaña y vence sola |
 
 **Equipos monitoreados:** solo métricas técnicas de salud.
 
@@ -412,7 +412,7 @@ Tu confianza es lo primero: la plataforma solo pide los datos necesarios para fu
 | Tráfico y consumo por Wi-Fi, cable UTP y datos móviles; errores, latencia y pérdida hacia DNS públicos, señal y número de puertos en escucha | Direcciones IP, ubicación, nombre de la red Wi-Fi o aplicaciones instaladas |
 | Almacenamiento libre y, en celulares, batería y temperatura | Historial de navegación o pulsaciones de teclado |
 
-Las métricas se conservan 90 días.
+Las métricas y los demás registros se depuran automáticamente.
 
 ### Cómo se protege tu información
 

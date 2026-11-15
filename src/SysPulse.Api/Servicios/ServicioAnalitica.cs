@@ -53,7 +53,7 @@ public sealed class ServicioAnalitica(ContextoMongo mongo, ServicioHosts hosts, 
 
     public async Task<Analitica> CalcularAsync(int dias, CancellationToken ct)
     {
-        dias = Math.Clamp(dias, 1, 90);
+        dias = Math.Clamp(dias, 1, (int)ContextoMongo.Retencion.TotalDays);
         var ahora = reloj.GetUtcNow().UtcDateTime;
         var desde = ahora.AddDays(-dias);
         var zona = Zona();
