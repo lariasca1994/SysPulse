@@ -12,13 +12,11 @@ public sealed record DocumentoAgregado(string Host, string TipoHost, DateTimeOff
 
 /// <summary>
 /// Escribe DIRECTO en Atlas (regla de oro, sección 3: el agente nunca envía métricas a Render).
-/// Colecciones: metricas_5m (TTL 90 días), estado_actual (1 documento por host) y hosts.
+/// Colecciones: metricas_5m (su depuración la gestiona la API), estado_actual (1 documento por host) y hosts.
 /// Los nombres de métrica se guardan con '_' en vez de '.' para que sean campos consultables.
 /// </summary>
 public sealed class PublicadorAtlas : IPublicador
 {
-    private static readonly TimeSpan Ttl = TimeSpan.FromDays(90);
-
     private readonly IMongoCollection<BsonDocument> _metricas;
     private readonly IMongoCollection<BsonDocument> _estado;
     private readonly IMongoCollection<BsonDocument> _hosts;
@@ -41,11 +39,10 @@ public sealed class PublicadorAtlas : IPublicador
     public async Task AsegurarIndicesAsync(CancellationToken ct)
     {
         if (_indicesListos) return;
-        await _metricas.Indexes.CreateManyAsync(
-        [
+        // El índice de depuración (TTL) lo crea solo la API: así un agente nunca choca con el plazo vigente.
+        await _metricas.Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("host").Ascending("ts"), new CreateIndexOptions { Name = "host_ts", Unique = true }),
-            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("ts"), new CreateIndexOptions { Name = "ttl_90d", ExpireAfter = Ttl }),
-        ], ct).ConfigureAwait(false);
+            cancellationToken: ct).ConfigureAwait(false);
         _indicesListos = true;
     }
 

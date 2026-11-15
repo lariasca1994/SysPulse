@@ -11,7 +11,7 @@ import { Barras } from "./Barras";
 import h from "../hosts/hosts.module.css";
 import s from "./analitica.module.css";
 
-const PERIODOS = [7, 30, 90];
+const PERIODOS = [7, 15];
 
 function duracion(min: number | null): string {
   if (min === null) return "—";
@@ -26,7 +26,7 @@ const pct = (v: number | null) => (v === null ? "—" : `${v.toLocaleString("es-
 const tonoSla = (v: number | null) => (v === null ? "neutro" : v >= 95 ? "ok" : v >= 80 ? "advertencia" : "excepcion");
 
 export default function Analitica() {
-  const [dias, setDias] = useState(30);
+  const [dias, setDias] = useState(15);
   const { datos, error, cargando, recargar } = useConsulta((t) => analitica.obtener(t, dias), [dias], 5 * 60_000);
 
   return (

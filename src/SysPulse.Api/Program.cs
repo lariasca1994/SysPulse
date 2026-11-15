@@ -73,6 +73,7 @@ builder.Services.AddSingleton<ColaNotificaciones>();
 builder.Services.AddScoped<DespachadorNotificaciones>();
 builder.Services.AddHostedService<ProcesadorNotificaciones>();
 builder.Services.AddHostedService<InicioApi>();
+builder.Services.AddHostedService<ServicioDepuracion>();
 if (desarrollo) builder.Services.AddHostedService<SondeoTelegramDesarrollo>();
 
 // ───── Autenticación y autorización (sección 12) ─────

@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
 
@@ -8,6 +9,9 @@ namespace SysPulse.Infrastructure.Persistencia;
 /// </summary>
 public sealed class ContextoMongo
 {
+    /// <summary>Regla obligatoria del portafolio: todo registro con fecha se depura a los 15 días.</summary>
+    public static readonly TimeSpan Retencion = TimeSpan.FromDays(15);
+
     private static readonly Lock Bloqueo = new();
     private static bool _convencionesRegistradas;
 
@@ -75,9 +79,6 @@ public sealed class ContextoMongo
 
         await Auditoria.Indexes.CreateOneAsync(
             new CreateIndexModel<AuditoriaDoc>(Builders<AuditoriaDoc>.IndexKeys.Descending(a => a.Ts), new CreateIndexOptions { Name = "ts" }), cancellationToken: ct).ConfigureAwait(false);
-        // Los eventos de auditoría se depuran a los 15 días, igual que en todo el portafolio.
-        await Auditoria.Indexes.CreateOneAsync(
-            new CreateIndexModel<AuditoriaDoc>(Builders<AuditoriaDoc>.IndexKeys.Ascending(a => a.Ts), new CreateIndexOptions { Name = "ttl_15d", ExpireAfter = TimeSpan.FromDays(15) }), cancellationToken: ct).ConfigureAwait(false);
 
         await Incidentes.Indexes.CreateManyAsync(
         [
@@ -89,8 +90,6 @@ public sealed class ContextoMongo
         await Eventos.Indexes.CreateManyAsync(
         [
             new CreateIndexModel<EventoDoc>(Builders<EventoDoc>.IndexKeys.Ascending(e => e.ClaveDedup).Descending(e => e.Ts), new CreateIndexOptions { Name = "clave_ts" }),
-            // Los eventos crudos se conservan 90 días, igual que las métricas.
-            new CreateIndexModel<EventoDoc>(Builders<EventoDoc>.IndexKeys.Ascending(e => e.Recibido), new CreateIndexOptions { Name = "ttl_90d", ExpireAfter = TimeSpan.FromDays(90) }),
         ], ct).ConfigureAwait(false);
 
         await Mensajes.Indexes.CreateOneAsync(
@@ -103,8 +102,37 @@ public sealed class ContextoMongo
         await Notificaciones.Indexes.CreateManyAsync(
         [
             new CreateIndexModel<NotificacionDoc>(Builders<NotificacionDoc>.IndexKeys.Ascending(n => n.Clave).Descending(n => n.Ts), new CreateIndexOptions { Name = "clave_ts" }),
-            new CreateIndexModel<NotificacionDoc>(Builders<NotificacionDoc>.IndexKeys.Ascending(n => n.Ts), new CreateIndexOptions { Name = "ttl_30d", ExpireAfter = TimeSpan.FromDays(30) }),
         ], ct).ConfigureAwait(false);
+
+        // Depuración automática en Atlas (funciona aunque la API esté dormida). Lo que depende de otros
+        // registros (incidentes, salas, mensajes) lo depura ServicioDepuracion en la API.
+        await AsegurarTtlAsync("auditoria", "ts", ct).ConfigureAwait(false);
+        await AsegurarTtlAsync("eventos", "recibido", ct).ConfigureAwait(false);
+        await AsegurarTtlAsync("notificaciones", "ts", ct).ConfigureAwait(false);
+        await AsegurarTtlAsync("metricas_5m", "ts", ct).ConfigureAwait(false);
+        await AsegurarTtlAsync("altas_equipos", "creado", ct).ConfigureAwait(false);
+        await AsegurarTtlAsync("cambios", "creado", ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Deja un único índice TTL llamado "ttl" sobre <paramref name="campo"/> con la retención vigente. Si ya existía
+    /// un índice sobre ese campo con otro plazo u otro nombre, lo reemplaza (CreateIndex fallaría por conflicto de opciones).
+    /// </summary>
+    private async Task AsegurarTtlAsync(string coleccion, string campo, CancellationToken ct)
+    {
+        var col = Db.GetCollection<BsonDocument>(coleccion);
+        var segundos = (long)Retencion.TotalSeconds;
+        var indices = await (await col.Indexes.ListAsync(ct).ConfigureAwait(false)).ToListAsync(ct).ConfigureAwait(false);
+        var actual = indices.FirstOrDefault(i =>
+            i["key"].AsBsonDocument is { ElementCount: 1 } k && k.Names.First() == campo && k[0].ToDouble() == 1);
+        if (actual is not null)
+        {
+            if (actual["name"].AsString == "ttl" && actual.TryGetValue("expireAfterSeconds", out var s) && s.ToInt64() == segundos) return;
+            await col.Indexes.DropOneAsync(actual["name"].AsString, ct).ConfigureAwait(false);
+        }
+        await col.Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(new BsonDocument(campo, 1), new CreateIndexOptions { Name = "ttl", ExpireAfter = Retencion }),
+            cancellationToken: ct).ConfigureAwait(false);
     }
 
     private static void RegistrarConvenciones()

@@ -6,6 +6,6 @@ namespace SysPulse.Api.Endpoints;
 public static class AnaliticaEndpoints
 {
     public static void MapAnalitica(this IEndpointRouteBuilder app) =>
-        app.MapGet("/api/analitica", (int? dias, ServicioAnalitica s, CancellationToken ct) => s.CalcularAsync(dias ?? 30, ct))
+        app.MapGet("/api/analitica", (int? dias, ServicioAnalitica s, CancellationToken ct) => s.CalcularAsync(dias ?? 15, ct))
             .RequireAuthorization();
 }
