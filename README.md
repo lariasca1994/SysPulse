@@ -201,14 +201,14 @@ asigna el sistema, acompañado de su modelo comercial para ubicarlo.
 - **Al día en seguridad:** el runtime, el sistema y las dependencias se mantienen con los últimos
   parches y se revisan periódicamente.
 - **Cuentas:** contraseñas protegidas, MFA obligatorio (app o correo), bloqueo temporal ante
-  intentos fallidos repetidos, registro de eventos de seguridad depurado a los 15 días y sesiones
+  intentos fallidos repetidos, registro de eventos de seguridad con depuración automática y sesiones
   que se cierran al cambiar contraseña, rol o MFA.
 - **Roles:** N1, N2 y N3 los elige cada persona al registrarse; el rol **gestor** se solicita y solo
   lo aprueba el **admin**. Nadie borra datos: el admin solo desactiva o retira.
 - **Privacidad:** cada equipo se muestra con un nombre genérico (“Equipo portátil 2”, “Celular 1”) y su
   modelo comercial; nunca el nombre que le dio el dueño, el usuario, el número de serie, el IMEI ni la IP.
 - **Instaladores públicos sin secretos:** el equipo recibe su configuración al canjear un código de un
-  solo uso (24 h; solo se guarda su huella) y la guarda cifrada (DPAPI en Windows, Android Keystore).
+  solo uso con vencimiento (solo se guarda su huella) y la guarda cifrada (DPAPI en Windows, Android Keystore).
   Antes de cada publicación, `tools/escanear-secretos.ps1` revisa que los paquetes no contengan
   secretos, datos personales ni rutas del equipo de compilación. La app Android se publica sin modo
   de depuración.
@@ -260,7 +260,7 @@ asigna el sistema, acompañado de su modelo comercial para ubicarlo.
 1. Escribe tu correo y tu contraseña y pulsa **Continuar**.
 2. La primera vez, elige tu verificación en dos pasos: **App autenticadora (recomendado)** (escanea
    el QR con Google o Microsoft Authenticator, Authy) o **Código por correo** (te llega un código de 6
-   dígitos que vence en 10 minutos). Escribe el primer código, pulsa **Activar** y **guarda los 10
+   dígitos de vigencia corta). Escribe el primer código, pulsa **Activar** y **guarda los 10
    códigos de recuperación**.
 3. Las siguientes veces, escribe el código de 6 dígitos del método que elegiste y pulsa **Verificar**;
    si tienes los dos, la pantalla ofrece usar el otro.
@@ -309,7 +309,7 @@ propio durante 15 minutos. Al cerrarse el incidente, su sala queda de solo lectu
 
 ### 5.7 Analítica
 
-Elige el período (7, 30 o 90 días) para ver los indicadores de niveles de servicio, gestión de
+Elige el período para ver los indicadores de niveles de servicio, gestión de
 incidentes, candidatos a problema, disponibilidad de los equipos y cambios registrados.
 
 ### 5.8 Mi cuenta
@@ -321,7 +321,7 @@ teléfono y, si eres N1, N2 o N3, solicita el rol de gestor.
 ### 5.9 Agregar equipos
 
 1. Un técnico **N2 o N3** pulsa **Agregar equipo** en **Salud de hosts** (también está en
-   **Administración → Equipos**) y obtiene un código (sirve una vez, vence en 24 horas).
+   **Administración → Equipos**) y obtiene un código (sirve una vez y tiene vencimiento).
 2. **Windows (computador, portátil o tablet):** descarga
    [`SysPulse.Agent-win-x64.zip`](https://github.com/lariasca1994/syspulse-agentes/releases/latest/download/SysPulse.Agent-win-x64.zip),
    descomprímelo y, en PowerShell como administrador dentro de esa carpeta:
