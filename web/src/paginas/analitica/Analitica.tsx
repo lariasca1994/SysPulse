@@ -90,6 +90,7 @@ function Contenido({ d }: { d: Datos }) {
 
         <section className={s.panel}>
           <h3 className={s.tituloPanel}>Por prioridad</h3>
+          <div className={s.desplazable}>
           <table className={s.tabla}>
             <thead><tr><th>Prioridad</th><th className={s.num}>Incidentes</th><th>SLA de resolución</th></tr></thead>
             <tbody>
@@ -109,6 +110,7 @@ function Contenido({ d }: { d: Datos }) {
               ))}
             </tbody>
           </table>
+          </div>
         </section>
       </div>
 

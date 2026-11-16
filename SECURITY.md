@@ -1,37 +1,14 @@
-# Seguridad y publicación
+# Seguridad
 
-No subas `.env`, archivos `.env.*` (salvo `.env.example` y `web/.env.production`, que solo contiene la
-URL pública de la API), llaves de firma (`*.keystore`, `*.jks`), bases locales del agente (`*.db`) ni
-la carpeta `artifacts/`. Antes de publicar, revisa `git status --ignored` y confirma que solo aparecen
-los archivos fuente esperados.
+- Nunca subas `.env` ni otros archivos con claves, contraseñas o cadenas de conexión: van solo en
+  variables de entorno. `web/.env.production` es la excepción porque solo tiene la dirección pública
+  de la API.
+- Antes de publicar, revisa `git status --ignored` y confirma que solo aparecen archivos fuente.
+- Los instaladores de los agentes se revisan antes de cada publicación para que no lleven secretos.
+- Si una credencial queda expuesta, revócala y cámbiala de inmediato: borrarla en un commit posterior
+  no la elimina del historial.
 
-Los secretos (cadenas de conexión, claves de JWT, MFA y agente, tokens de Telegram y Brevo) se
-configuran solo como variables de entorno en Render y en el `.env` local. Los equipos reciben los suyos
-al canjear un código de alta de un solo uso y los guardan cifrados (DPAPI en Windows, Android Keystore
-en el celular).
+## Reportar una vulnerabilidad
 
-Lo que recibe un equipo es solo lo mínimo para reportar:
-
-- `MONGO_URI_AGENTES` / `MONGO_URI_AGENTES_ANDROID`: usuario de base exclusivo de los agentes, con un rol
-  que solo inserta y actualiza sus colecciones de métricas y lee la configuración central y los tiempos
-  de los incidentes. Sin esas variables el alta responde 503: nunca se entrega la cadena de la API.
-- `AGENT_API_KEY`: solo permite registrar eventos y avisos de SLA.
-- Nunca el token del bot de Telegram ni las cuentas de las personas: los avisos los envía solo la API.
-  La configuración central que leen los equipos tampoco los lleva.
-
-## Instaladores públicos
-
-El repositorio `syspulse-agentes` es público y solo contiene binarios. Antes de cada publicación:
-
-1. Compila en `Release` (sin símbolos de depuración y sin rutas del equipo de compilación).
-2. Ejecuta `tools/escanear-secretos.ps1` sobre el zip y el APK: debe terminar con 0 hallazgos.
-3. Confirma que el APK no es depurable (`aapt2 dump badging` no debe mostrar `application-debuggable`).
-4. Anuncia la versión con `SysPulse.Herramientas publicar-version`, que registra la huella SHA-256 en la
-   configuración central: los equipos rechazan cualquier archivo que no coincida.
-
-Las herramientas de administración (`tools/SysPulse.Herramientas`) nunca se publican.
-
-## Si una credencial queda expuesta
-
-Revócala y rota su valor de inmediato (Atlas, Telegram, Brevo, Render). Borrar el archivo en un commit
-posterior no elimina su contenido del historial. Las sesiones se invalidan al rotar `JWT_SECRET`.
+Escribe a [ariascluisf@hotmail.com](mailto:ariascluisf@hotmail.com) o por Telegram a
+[@lfac6](https://t.me/lfac6) con los pasos para reproducirla. No la publiques mientras se corrige.

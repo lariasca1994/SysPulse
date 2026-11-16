@@ -108,6 +108,7 @@
 }
 
 .panel {
+  min-width: 0; /* hijo de la rejilla: sin esto una tabla ancha estira la página en el celular */
   padding: var(--sp-4) var(--sp-6);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);

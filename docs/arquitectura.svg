@@ -12,7 +12,7 @@
 <rect x="420" y="130" width="520" height="320" rx="26" fill="#46E3B7" fill-opacity=".07" stroke="#46E3B7" stroke-opacity=".6" stroke-width="1.6" stroke-dasharray="7 6"/><rect x="438" y="118" width="69.2" height="24" rx="12" fill="#46E3B7"/><text x="472.6" y="134" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FFFFFF">Render</text>
 <text x="922" y="436" text-anchor="end" font-size="10.5" fill="#46E3B7" fill-opacity=".9">API ASP.NET Core 10 · Docker</text>
 <rect x="1015" y="130" width="265" height="400" rx="26" fill="#47A248" fill-opacity=".07" stroke="#47A248" stroke-opacity=".6" stroke-width="1.6" stroke-dasharray="7 6"/><rect x="1033" y="118" width="119.60000000000001" height="24" rx="12" fill="#47A248"/><text x="1092.8" y="134" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FFFFFF">MongoDB Atlas</text>
-<text x="1262" y="516" text-anchor="end" font-size="10.5" fill="#47A248" fill-opacity=".9">M0 gratuito</text>
+<text x="1262" y="516" text-anchor="end" font-size="10.5" fill="#47A248" fill-opacity=".9">métricas · incidentes</text>
 <rect x="420" y="560" width="300" height="150" rx="26" fill="#CBD5E1" fill-opacity=".07" stroke="#CBD5E1" stroke-opacity=".6" stroke-width="1.6" stroke-dasharray="7 6"/><rect x="438" y="548" width="69.2" height="24" rx="12" fill="#CBD5E1"/><text x="472.6" y="564" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0F172A">Vercel</text>
 <text x="702" y="696" text-anchor="end" font-size="10.5" fill="#CBD5E1" fill-opacity=".9">PWA instalable</text>
 <rect x="800" y="560" width="480" height="150" rx="26" fill="#E1251B" fill-opacity=".07" stroke="#E1251B" stroke-opacity=".6" stroke-width="1.6" stroke-dasharray="7 6"/><rect x="818" y="548" width="69.2" height="24" rx="12" fill="#E1251B"/><text x="852.6" y="564" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FFFFFF">Avisos</text>
@@ -32,7 +32,7 @@
 <g filter="url(#sh)"><rect x="1045" y="190" width="210" height="58" rx="18" fill="#162033" stroke="#47A248" stroke-width="2"/><circle cx="1074" cy="219" r="17" fill="#47A248"/><g transform="translate(1074,219)"><ellipse cx="0" cy="-6" rx="9" ry="3.5" fill="none" stroke="#fff" stroke-width="1.9"/><path d="M-9,-6 v12 c0,4.6 18,4.6 18,0 v-12 M-9,0 c0,4.6 18,4.6 18,0" fill="none" stroke="#fff" stroke-width="1.9"/></g></g>
 <text x="1101" y="217" font-size="13.5" font-weight="700" fill="#F1F5F9">Métricas</text><text x="1101" y="234" font-size="11" fill="#94A3B8">agregados 5 min · 90 días</text>
 <g filter="url(#sh)"><rect x="1045" y="300" width="210" height="58" rx="18" fill="#162033" stroke="#47A248" stroke-width="2"/><circle cx="1074" cy="329" r="17" fill="#47A248"/><g transform="translate(1074,329)"><ellipse cx="0" cy="-6" rx="9" ry="3.5" fill="none" stroke="#fff" stroke-width="1.9"/><path d="M-9,-6 v12 c0,4.6 18,4.6 18,0 v-12 M-9,0 c0,4.6 18,4.6 18,0" fill="none" stroke="#fff" stroke-width="1.9"/></g></g>
-<text x="1101" y="327" font-size="13.5" font-weight="700" fill="#F1F5F9">Estado y config</text><text x="1101" y="344" font-size="11" fill="#94A3B8">central, sin reinstalar</text>
+<text x="1101" y="327" font-size="13.5" font-weight="700" fill="#F1F5F9">Estado y config</text><text x="1101" y="344" font-size="11" fill="#94A3B8">central</text>
 <g filter="url(#sh)"><rect x="1045" y="410" width="210" height="58" rx="18" fill="#162033" stroke="#47A248" stroke-width="2"/><circle cx="1074" cy="439" r="17" fill="#47A248"/><g transform="translate(1074,439)"><ellipse cx="0" cy="-6" rx="9" ry="3.5" fill="none" stroke="#fff" stroke-width="1.9"/><path d="M-9,-6 v12 c0,4.6 18,4.6 18,0 v-12 M-9,0 c0,4.6 18,4.6 18,0" fill="none" stroke="#fff" stroke-width="1.9"/></g></g>
 <text x="1101" y="437" font-size="13.5" font-weight="700" fill="#F1F5F9">Incidentes</text><text x="1101" y="454" font-size="11" fill="#94A3B8">salas · auditoría</text>
 <g filter="url(#sh)"><rect x="450" y="610" width="240" height="58" rx="18" fill="#162033" stroke="#0F172A" stroke-width="2"/><circle cx="479" cy="639" r="17" fill="#0F172A"/><g transform="translate(479,639)"><rect x="-10" y="-8" width="20" height="16" rx="3" fill="none" stroke="#fff" stroke-width="1.9"/><path d="M-10,-3.2 h20" stroke="#fff" stroke-width="1.9"/></g></g>
@@ -76,12 +76,12 @@
 <rect x="520.95" y="489" width="83.1" height="20" rx="10" fill="#0F172A" stroke="#7C8BA1" stroke-opacity=".7"/><text x="562.5" y="502.8" text-anchor="middle" font-size="10.5" font-weight="600" fill="#E2E8F0">HTTPS · WSS</text>
 <rect x="1236.35" y="264" width="95.3" height="20" rx="10" fill="#0F172A" stroke="#7C8BA1" stroke-opacity=".7"/><text x="1284" y="277.8" text-anchor="middle" font-size="10.5" font-weight="600" fill="#E2E8F0">actualización</text>
 <rect x="1353.65" y="279" width="58.699999999999996" height="20" rx="10" fill="#0F172A" stroke="#7C8BA1" stroke-opacity=".7"/><text x="1383" y="292.8" text-anchor="middle" font-size="10.5" font-weight="600" fill="#E2E8F0">publica</text>
-<rect x="588.65" y="94" width="302.7" height="20" rx="10" fill="#0F172A" stroke="#7C8BA1" stroke-opacity=".7"/><text x="740" y="107.8" text-anchor="middle" font-size="10.5" font-weight="600" fill="#E2E8F0">métricas directo a Atlas (sin pasar por la API)</text>
+<rect x="588.65" y="94" width="302.7" height="20" rx="10" fill="#0F172A" stroke="#7C8BA1" stroke-opacity=".7"/><text x="740" y="107.8" text-anchor="middle" font-size="10.5" font-weight="600" fill="#E2E8F0">métricas cifradas por HTTPS</text>
 <rect x="485.6" y="490" width="308.79999999999995" height="20" rx="10" fill="#0F172A" stroke="#7C8BA1" stroke-opacity=".7"/><text x="640" y="503.8" text-anchor="middle" font-size="10.5" font-weight="600" fill="#E2E8F0">configuración central: avisos, umbrales, versión</text>
 <path d="M36,800 h30" stroke="#7C8BA1" stroke-width="2.2"/><circle cx="51" cy="800" r="2.6" fill="#7C8BA1"/>
 <text x="74" y="804" font-size="11.5" fill="#94A3B8">Flujo de datos / petición</text>
 <path d="M260,800 h30" stroke="#7C8BA1" stroke-width="2.2" stroke-dasharray="6 5"/>
 <text x="298" y="804" font-size="11.5" fill="#94A3B8">Configuración central, actualización o proceso asíncrono</text>
 <rect x="680" y="791" width="30" height="18" rx="9" fill="#64748B" fill-opacity=".15" stroke="#64748B" stroke-dasharray="4 3"/>
-<text x="718" y="804" font-size="11.5" fill="#94A3B8">Plataforma donde corre (todas en capa gratuita)</text>
+<text x="718" y="804" font-size="11.5" fill="#94A3B8">Plataforma donde corre</text>
 </svg>

@@ -34,3 +34,6 @@ artifacts/
 out/
 release/
 !web/.env.production
+
+# Documento de diseño interno: solo local
+SysPulse-especificacion.md
