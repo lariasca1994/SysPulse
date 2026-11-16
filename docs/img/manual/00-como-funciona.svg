@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 284" role="img" aria-label="Monitoreo e incidentes TI: cómo funciona" font-family="Inter, Segoe UI, Roboto, Arial, sans-serif">
+<rect width="980" height="284" rx="18" fill="#ffffff"/>
+<rect x="1" y="1" width="978" height="282" rx="17" fill="none" stroke="#e5e7eb"/>
+<text x="32" y="44" font-size="20" font-weight="800" fill="#111827">Monitoreo e incidentes TI · cómo funciona</text>
+<rect x="32" y="56" width="56" height="4" rx="2" fill="#0b4f8a"/>
+<rect x="28.0" y="84" width="210" height="172" rx="14" fill="#0b4f8a" fill-opacity="0.06" stroke="#0b4f8a" stroke-opacity="0.35"/>
+<g transform="translate(62.0 118)" fill="none" stroke="#0b4f8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle r="22" fill="#0b4f8a" fill-opacity="0.12" stroke="none"/><circle cx="0" cy="-6" r="7"/><path d="M-12 12a12 12 0 0 1 24 0"/></g>
+<text x="94.0" y="124" font-size="15" font-weight="700" fill="#111827">Personas</text>
+<text x="46.0" y="168" font-size="13" fill="#374151">• Técnicos N1, N2 y N3</text>
+<text x="46.0" y="190" font-size="13" fill="#374151">• Gestores del servicio</text>
+<text x="46.0" y="212" font-size="13" fill="#374151">• Equipos con agente</text>
+<path d="M242.0 170.0 h18" stroke="#0b4f8a" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M256.0 165.0 l6 5 -6 5" fill="none" stroke="#0b4f8a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="266.0" y="84" width="210" height="172" rx="14" fill="#0b4f8a" fill-opacity="0.06" stroke="#0b4f8a" stroke-opacity="0.35"/>
+<g transform="translate(300.0 118)" fill="none" stroke="#0b4f8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle r="22" fill="#0b4f8a" fill-opacity="0.12" stroke="none"/><rect x="-12" y="-11" width="24" height="18" rx="3"/><path d="M-5 12h10M0 7v5"/></g>
+<text x="332.0" y="124" font-size="15" font-weight="700" fill="#111827">Aplicación</text>
+<text x="284.0" y="168" font-size="13" fill="#374151">• Web, tablet y celular</text>
+<text x="284.0" y="190" font-size="13" fill="#374151">• Se instala como aplicación</text>
+<text x="284.0" y="212" font-size="13" fill="#374151">• Ingreso en dos pasos</text>
+<path d="M480.0 170.0 h18" stroke="#0b4f8a" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M494.0 165.0 l6 5 -6 5" fill="none" stroke="#0b4f8a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="504.0" y="84" width="210" height="172" rx="14" fill="#0b4f8a" fill-opacity="0.06" stroke="#0b4f8a" stroke-opacity="0.35"/>
+<g transform="translate(538.0 118)" fill="none" stroke="#0b4f8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle r="22" fill="#0b4f8a" fill-opacity="0.12" stroke="none"/><rect x="-11" y="-11" width="9" height="9" rx="2"/><rect x="2" y="-11" width="9" height="9" rx="2"/><rect x="-11" y="2" width="9" height="9" rx="2"/><rect x="2" y="2" width="9" height="9" rx="2"/></g>
+<text x="570.0" y="124" font-size="15" font-weight="700" fill="#111827">Plataforma</text>
+<text x="522.0" y="168" font-size="13" fill="#374151">• Salud de los equipos</text>
+<text x="522.0" y="190" font-size="13" fill="#374151">• Incidentes con SLA</text>
+<text x="522.0" y="212" font-size="13" fill="#374151">• Salas en tiempo real</text>
+<text x="522.0" y="234" font-size="13" fill="#374151">• Indicadores ITIL</text>
+<path d="M718.0 170.0 h18" stroke="#0b4f8a" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M732.0 165.0 l6 5 -6 5" fill="none" stroke="#0b4f8a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="742.0" y="84" width="210" height="172" rx="14" fill="#0b4f8a" fill-opacity="0.06" stroke="#0b4f8a" stroke-opacity="0.35"/>
+<g transform="translate(776.0 118)" fill="none" stroke="#0b4f8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle r="22" fill="#0b4f8a" fill-opacity="0.12" stroke="none"/><rect x="-10" y="-3" width="20" height="15" rx="3"/><path d="M-6 -3v-4a6 6 0 0 1 12 0v4"/></g>
+<text x="808.0" y="124" font-size="15" font-weight="700" fill="#111827">Información</text>
+<text x="760.0" y="168" font-size="13" fill="#374151">• Métricas e incidentes guardados</text>
+<text x="760.0" y="190" font-size="13" fill="#374151">• Contraseñas protegidas</text>
+<text x="760.0" y="212" font-size="13" fill="#374151">• Avisos por Telegram y correo</text>
+</svg>
